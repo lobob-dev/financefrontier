@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Finance Frontier
 
-## Getting Started
+A personal blog on stock picking, presented as a floating 3D book.
 
-First, run the development server:
+**Current stage: book prototype.** The book, page turns, reading view and the simple 2D fallback
+work with three sample posts. The database, login, admin editor and the full public pages come next.
+
+## Run it
+
+You need Node.js 20 or newer.
+
+```bash
+npm install
+```
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## What to try
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Scroll, press the arrow keys, swipe sideways on a phone, or use the arrows at the bottom to turn pages.
+- Click the cover or "Open the book" to open it.
+- Click a line on the contents page to jump to that post.
+- Click a post page, or "Read this post", to zoom in and open the full article.
+- Use the moon button for dark mode.
+- "Switch to simple view" (bottom left) shows the 2D fallback that low-power devices and
+  visitors with reduced-motion settings get automatically. Adding `?view=2d` or `?view=3d` to the address forces either one.
 
-## Learn More
+## Where things live
 
-To learn more about Next.js, take a look at the following resources:
+| Path | What it is |
+|---|---|
+| `lib/site.ts` | Blog name, tagline, about text, contact email |
+| `lib/posts.ts` | The three sample posts (replaced by the database later) |
+| `components/book/Book.tsx` | The book model: covers, spine, page stacks, ribbon |
+| `components/book/pageMaterial.ts` | The shader that bends a page as it turns |
+| `components/book/textures.ts` | Draws every page and cover from post data |
+| `components/book/BookScene.tsx` | Lighting, camera and particles |
+| `components/book/BookExperience.tsx` | Scroll, keyboard, swipe and the on-screen controls |
+| `components/book/FlipBook2D.tsx` | The simple 2D fallback |
+| `app/blog` | Post list and reading view |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Everything on this site is personal opinion and education, not financial advice.

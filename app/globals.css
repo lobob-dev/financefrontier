@@ -1,26 +1,182 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-latin-wght-italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f7f9f6;
+  --bg-soft: #eef4f0;
+  --surface: #ffffff;
+  --ink: #16232d;
+  --ink-soft: #44525c;
+  --muted: #66737c;
+  --line: #e1e7e3;
+  --accent: #12a77c;
+  --accent-strong: #0a7a5c;
+  --accent-soft: #ddf3ea;
+  --on-accent: #ffffff;
+  --sky: #2f86c5;
+  --sky-soft: #e2f0fb;
+  --paper: #fbf8f1;
+  --paper-ink: #16232d;
+  --shadow: 20 45 40;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1a22;
+  --bg-soft: #14232d;
+  --surface: #182933;
+  --ink: #eaf1f0;
+  --ink-soft: #c3cfd0;
+  --muted: #93a3a9;
+  --line: #263944;
+  --accent: #3dd6a7;
+  --accent-strong: #5be0b6;
+  --accent-soft: #17382f;
+  --on-accent: #06281e;
+  --sky: #7cc3f2;
+  --sky-soft: #17303f;
+  --paper: #f4f0e6;
+  --paper-ink: #16232d;
+  --shadow: 0 0 0;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --shadow-soft: 0 10px 30px -12px rgb(var(--shadow) / 0.22), 0 2px 6px rgb(var(--shadow) / 0.06);
+  --shadow-lift: 0 24px 60px -20px rgb(var(--shadow) / 0.35), 0 4px 12px rgb(var(--shadow) / 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* The soft, bright backdrop behind the book and the reading pages. */
+.stage-bg {
+  background:
+    radial-gradient(55% 45% at 18% 12%, var(--accent-soft), transparent 72%),
+    radial-gradient(50% 45% at 86% 82%, var(--sky-soft), transparent 72%),
+    var(--bg);
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise-in {
+  animation: rise-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.fade-in {
+  animation: fade-in 0.35s ease both;
+}
+
+/* 2D fallback book */
+.paper-page {
+  container-type: inline-size;
+  aspect-ratio: 800 / 1120;
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+@keyframes flip-out {
+  from {
+    transform: scaleX(1);
+    filter: brightness(1);
+  }
+  to {
+    transform: scaleX(0);
+    filter: brightness(0.8);
+  }
+}
+@keyframes flip-in {
+  from {
+    transform: scaleX(0);
+    filter: brightness(0.8);
+  }
+  to {
+    transform: scaleX(1);
+    filter: brightness(1);
+  }
+}
+.flip-out {
+  animation: flip-out 0.24s cubic-bezier(0.5, 0, 0.9, 0.6) both;
+}
+.flip-in {
+  animation: flip-in 0.26s cubic-bezier(0.1, 0.5, 0.4, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise-in,
+  .fade-in,
+  .flip-out,
+  .flip-in {
+    animation-duration: 0.01s;
+  }
+  html {
+    scroll-behavior: auto !important;
+  }
 }
