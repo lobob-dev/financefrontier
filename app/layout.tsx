@@ -8,18 +8,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f9f6" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f1a22" },
-  ],
+  themeColor: "#0f1a22",
 };
 
-/** Runs before the page paints so the chosen theme never flashes. */
-const themeScript = `(function(){try{var t=localStorage.getItem('ff-theme');if(t!=='light'&&t!=='dark'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t}catch(e){}})()`;
+/**
+ * The site opens in dark mode. This runs before the page paints, so a visitor
+ * who has switched to light mode never sees a flash of the dark theme.
+ */
+const themeScript = `(function(){try{if(localStorage.getItem('ff-theme')==='light'){document.documentElement.dataset.theme='light'}}catch(e){}})()`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="en" data-theme="dark" className="h-full antialiased" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />

@@ -11,12 +11,12 @@ function subscribe(callback: () => void) {
 }
 
 function getSnapshot(): Theme {
-  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
 
-/** The current theme, kept in sync with the data-theme attribute on <html>. */
+/** The current theme (dark unless the visitor chose light), kept in sync with the data-theme attribute on <html>. */
 export function useTheme(): Theme {
-  return useSyncExternalStore(subscribe, getSnapshot, () => "light");
+  return useSyncExternalStore(subscribe, getSnapshot, () => "dark");
 }
 
 export function setTheme(theme: Theme) {
