@@ -2,99 +2,134 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SiteFooter, SiteHeader } from "@/components/site/SiteHeader";
-import { getPostBySlug, getPublishedPosts } from "@/lib/posts";
-import { formatDate } from "@/lib/format";
+import { PageShell } from "@/components/site/PageShell";
+import { getNeighbours, getPostBySlug, getPublishedPosts } from "@/lib/posts";
+import { renderDoc } from "@/lib/content/render";
+import { formatDate, tagSlug } from "@/lib/format";
+import { site } from "@/lib/site";
+import { siteUrl } from "@/lib/env";
 
 export async function generateStaticParams() {
-  return (await getPublishedPosts()).map((post) => ({ slug: post.slug }));
+  const posts = await getPublishedPosts();
+  return posts.length ? posts.map((post) => ({ slug: post.slug })) : [{ slug: "__none__" }];
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps<"/blog/[slug]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
-  return post ? { title: post.title, description: post.excerpt } : {};
+  if (!post) return {};
+  const description = post.seoDescription || post.excerpt;
+  return {
+    title: post.title,
+    description,
+    alternates: { canonical: `/blog/${post.slug}` },
+    openGraph: {
+      type: "article",
+      title: post.title,
+      description,
+      url: `/blog/${post.slug}`,
+      publishedTime: post.date,
+      modifiedTime: post.updatedAt,
+      tags: post.tags,
+    },
+    twitter: { card: "summary_large_image", title: post.title, description },
+  };
 }
 
 export default function PostPage({ params }: PageProps<"/blog/[slug]">) {
   // The page frame shows instantly; the article streams in behind a quiet placeholder.
   return (
-    <div className="stage-bg flex min-h-[100svh] flex-col">
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-3xl px-5 pb-20 pt-10 sm:px-8 sm:pt-14">
-        <Suspense fallback={<div className="h-[70svh]" aria-busy="true" />}>
-          <Article params={params} />
-        </Suspense>
-      </main>
-      <SiteFooter />
-    </div>
+    <PageShell>
+      <Suspense fallback={<div className="h-[70svh]" aria-busy="true" />}>
+        <Article params={params} />
+      </Suspense>
+    </PageShell>
   );
 }
 
-async function Article({
-  params,
-}: {
-  params: PageProps<"/blog/[slug]">["params"];
-}) {
+async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"] }) {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) notFound();
+  const { newer, older } = await getNeighbours(slug);
+  const html = renderDoc(post.content);
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.seoDescription || post.excerpt,
+    datePublished: post.date,
+    dateModified: post.updatedAt,
+    keywords: post.tags.join(", "),
+    url: `${siteUrl}/blog/${post.slug}`,
+    image: new URL(post.coverImage, siteUrl).toString(),
+    publisher: { "@type": "Organization", name: site.name },
+    author: { "@type": "Person", name: site.name },
+  };
 
   return (
     <article className="rise-in">
-      <Link
-        href="/"
-        className="text-sm font-medium text-accent-strong hover:underline"
-      >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+      <Link href="/" className="text-sm font-medium text-accent-strong hover:underline">
         <span aria-hidden="true">←</span> Back to the book
       </Link>
       <p className="mt-8 text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
-        {formatDate(post.date)} · {post.readingMinutes} min read
+        <time dateTime={post.date}>{formatDate(post.date)}</time> · {post.readingMinutes} min read
       </p>
       <h1 className="mt-3 font-serif text-4xl font-semibold leading-[1.12] tracking-tight sm:text-[3.25rem]">
         {post.title}
       </h1>
-      <ul className="mt-5 flex flex-wrap gap-2">
-        {post.tags.map((tag) => (
-          <li
-            key={tag}
-            className="rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-strong"
-          >
-            {tag}
-          </li>
-        ))}
-      </ul>
+      {post.tags.length > 0 && (
+        <ul className="mt-5 flex flex-wrap gap-2" aria-label="Tags">
+          {post.tags.map((tag) => (
+            <li key={tag}>
+              <Link
+                href={`/tags/${tagSlug(tag)}`}
+                className="inline-block rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-strong hover:brightness-105"
+              >
+                {tag}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
       <figure className="mt-9">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={post.coverImage}
           alt={post.coverAlt}
-          className="aspect-[16/9] w-full rounded-2xl object-cover shadow-soft"
+          width={1600}
+          height={900}
+          fetchPriority="high"
+          className="aspect-[16/9] w-full rounded-2xl bg-bg-soft object-cover shadow-soft"
         />
       </figure>
-      <div className="mt-10 space-y-6 text-[1.09rem] leading-[1.8] text-ink-soft">
-        {post.content.map((block, i) =>
-          block.type === "h2" ? (
-            <h2
-              key={i}
-              className="pt-4 font-serif text-2xl font-semibold text-ink sm:text-[1.75rem]"
-            >
-              {block.text}
-            </h2>
-          ) : block.type === "quote" ? (
-            <blockquote
-              key={i}
-              className="border-l-[3px] border-accent pl-5 font-serif text-xl italic leading-relaxed text-ink"
-            >
-              {block.text}
-            </blockquote>
+      <div className="prose-ff mt-10" dangerouslySetInnerHTML={{ __html: html }} />
+
+      <p className="mt-14 border-t border-line pt-6 text-sm text-muted">{site.disclaimer}</p>
+
+      {(newer || older) && (
+        <nav aria-label="More posts" className="mt-10 grid gap-4 sm:grid-cols-2">
+          {older ? (
+            <Link href={`/blog/${older.slug}`} className="rounded-2xl border border-line bg-surface p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">Previous post</span>
+              <span className="mt-1 block font-serif text-lg font-semibold text-ink">{older.title}</span>
+            </Link>
           ) : (
-            <p key={i}>{block.text}</p>
-          ),
-        )}
-      </div>
+            <span />
+          )}
+          {newer && (
+            <Link href={`/blog/${newer.slug}`} className="rounded-2xl border border-line bg-surface p-5 text-right shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">Next post</span>
+              <span className="mt-1 block font-serif text-lg font-semibold text-ink">{newer.title}</span>
+            </Link>
+          )}
+        </nav>
+      )}
     </article>
   );
 }

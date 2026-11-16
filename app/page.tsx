@@ -7,7 +7,7 @@ export default async function Home() {
   return (
     <>
       <SiteHeader floating />
-      <main>
+      <main id="main">
         <BookExperience posts={posts} />
       </main>
     </>

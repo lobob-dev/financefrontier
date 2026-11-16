@@ -29,8 +29,11 @@ export function SiteHeader({ floating = false }: { floating?: boolean }) {
           <Wordmark />
         </div>
         <nav className="pointer-events-auto flex items-center gap-1 sm:gap-2" aria-label="Main">
-          <Link href="/blog" className="rounded-full px-3.5 py-2 text-sm font-medium text-ink-soft transition hover:bg-accent-soft hover:text-accent-strong">
+          <Link href="/blog" className="rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-accent-soft hover:text-accent-strong sm:px-3.5">
             All posts
+          </Link>
+          <Link href="/about" className="rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-accent-soft hover:text-accent-strong sm:px-3.5">
+            About
           </Link>
           <ThemeToggle />
         </nav>
@@ -43,7 +46,12 @@ export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line/70">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <p>© {site.name}</p>
+        <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <span>© {site.name}</span>
+          <Link href="/about" className="hover:text-accent-strong">About</Link>
+          <Link href="/contact" className="hover:text-accent-strong">Contact</Link>
+          <a href="/rss.xml" className="hover:text-accent-strong">RSS</a>
+        </nav>
         <p>{site.disclaimer}</p>
       </div>
     </footer>

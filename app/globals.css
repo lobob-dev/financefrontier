@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @font-face {
   font-family: "Fraunces";
   src: url("/fonts/fraunces-latin-wght-normal.woff2") format("woff2");
@@ -179,4 +181,174 @@ body {
   html {
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------- Forms and buttons ---------- */
+@utility field {
+  @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[0.95rem] text-ink shadow-sm outline-none transition placeholder:text-muted focus:border-accent focus:ring-4 focus:ring-accent/20;
+}
+@utility label {
+  @apply mb-1.5 block text-sm font-medium text-ink;
+}
+@utility hint {
+  @apply mt-1.5 text-xs leading-relaxed text-muted;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-55;
+}
+@utility btn-primary {
+  @apply btn bg-accent-strong text-on-accent shadow-soft hover:brightness-110;
+}
+@utility btn-quiet {
+  @apply btn border border-line bg-surface text-ink hover:border-accent hover:text-accent-strong;
+}
+@utility btn-danger {
+  @apply btn border border-red-300/60 text-red-700 hover:bg-red-50;
+}
+
+:root[data-theme="dark"] .btn-danger {
+  color: #fca5a5;
+  border-color: rgb(252 165 165 / 0.35);
+}
+:root[data-theme="dark"] .btn-danger:hover {
+  background: rgb(252 165 165 / 0.08);
+}
+
+
+/* ---------- Post content: the reading page, the editor and its preview ---------- */
+.prose-ff {
+  color: var(--ink-soft);
+  font-size: 1.09rem;
+  line-height: 1.8;
+  overflow-wrap: break-word;
+}
+.prose-ff > * + * {
+  margin-top: 1.4em;
+}
+.prose-ff h2,
+.prose-ff h3 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  scroll-margin-top: 5rem;
+}
+.prose-ff h2 {
+  font-size: 1.75rem;
+  margin-top: 2em;
+}
+.prose-ff h3 {
+  font-size: 1.35rem;
+  margin-top: 1.7em;
+}
+.prose-ff a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.prose-ff strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+.prose-ff ul,
+.prose-ff ol {
+  padding-left: 1.4em;
+}
+.prose-ff ul {
+  list-style: disc;
+}
+.prose-ff ol {
+  list-style: decimal;
+}
+.prose-ff li + li {
+  margin-top: 0.4em;
+}
+.prose-ff li::marker {
+  color: var(--accent);
+}
+.prose-ff li > p {
+  margin: 0;
+}
+.prose-ff blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1.25rem;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.prose-ff hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 2.5em auto;
+  width: 40%;
+}
+.prose-ff :not(pre) > code {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+  font-size: 0.88em;
+  color: var(--ink);
+}
+.prose-ff pre {
+  background: #101c24;
+  color: #dbe7e5;
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  box-shadow: var(--shadow-soft);
+}
+.prose-ff pre code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  background: none;
+  padding: 0;
+  border: 0;
+}
+.prose-ff figure img,
+.prose-ff img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+}
+.prose-ff figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* code highlighting colours, readable on the dark code background in both themes */
+.hljs-comment, .hljs-quote { color: #7f9a97; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-type { color: #7cc3f2; }
+.hljs-string, .hljs-attr, .hljs-template-tag, .hljs-addition { color: #8fe3bf; }
+.hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet { color: #f6c177; }
+.hljs-title, .hljs-section, .hljs-function .hljs-title { color: #f2a8c8; }
+.hljs-variable, .hljs-params, .hljs-property { color: #e6eeec; }
+.hljs-meta, .hljs-deletion { color: #f08f7a; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
+/* the writing surface in the admin editor */
+.editor-surface {
+  min-height: 55vh;
+  outline: none;
+}
+.editor-surface p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--muted);
+  pointer-events: none;
+}
+.editor-surface img.ProseMirror-selectednode {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
