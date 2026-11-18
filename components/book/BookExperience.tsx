@@ -276,6 +276,7 @@ export default function BookExperience({ posts }: { posts: PostSummary[] }) {
       if (action.type === "goto") goTo(action.step);
       else if (action.type === "post") openPost(action.index);
       else if (action.href.startsWith("mailto:")) window.location.href = action.href;
+      else if (/^https?:/.test(action.href)) window.open(action.href, "_blank", "noopener,noreferrer");
       else router.push(action.href);
     },
     [goTo, openPost, router],

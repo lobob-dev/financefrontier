@@ -36,6 +36,12 @@ export function SiteHeader({ floating = false }: { floating?: boolean }) {
             About
           </Link>
           <ThemeToggle />
+          <Link
+            href="/login"
+            className="ml-1 rounded-full border border-line bg-surface/70 px-3.5 py-2 text-sm font-semibold text-ink shadow-soft backdrop-blur transition hover:border-accent hover:text-accent-strong"
+          >
+            Log in
+          </Link>
         </nav>
       </div>
     </header>
@@ -47,9 +53,14 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-line/70">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <span>© {site.name}</span>
+          <span>
+            © {site.name} · {site.credit}
+          </span>
           <Link href="/about" className="hover:text-accent-strong">About</Link>
           <Link href="/contact" className="hover:text-accent-strong">Contact</Link>
+          <a href={site.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-accent-strong">
+            LinkedIn
+          </a>
           <a href="/rss.xml" className="hover:text-accent-strong">RSS</a>
         </nav>
         <p>{site.disclaimer}</p>

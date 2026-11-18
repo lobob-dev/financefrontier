@@ -239,7 +239,7 @@ function About({ onAction }: { onAction: Props["onAction"] }) {
           About the author
         </p>
         <h2 className="mt-[2cqw] font-serif text-[length:8.2cqw] font-semibold text-[#2B3A40]">
-          About me
+          {site.author}
         </h2>
         <div className="mt-[3.5cqw] h-[0.8cqw] w-[8cqw] rounded-full bg-[#11936F]" />
         <p className="mt-[5.5cqw] text-[length:3.1cqw] leading-[1.62] text-[#55646A]">
@@ -253,6 +253,14 @@ function About({ onAction }: { onAction: Props["onAction"] }) {
           className="mt-[1.5cqw] inline-block font-serif text-[length:3.4cqw] font-semibold text-[#0A7A5C] underline underline-offset-4"
         >
           {site.contactEmail}
+        </a>
+        <a
+          href={site.linkedin}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-[2.5cqw] block text-[length:2.8cqw] font-semibold text-[#0A7A5C]"
+        >
+          Connect on LinkedIn ↗
         </a>
         <div>
           <button

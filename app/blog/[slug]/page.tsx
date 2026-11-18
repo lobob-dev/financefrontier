@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/site/PageShell";
+import { AuthorCard } from "@/components/site/AuthorCard";
 import { getNeighbours, getPostBySlug, getPublishedPosts } from "@/lib/posts";
 import { renderDoc } from "@/lib/content/render";
 import { formatDate, tagSlug } from "@/lib/format";
@@ -31,6 +32,7 @@ export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): P
       publishedTime: post.date,
       modifiedTime: post.updatedAt,
       tags: post.tags,
+      authors: [site.author],
     },
     twitter: { card: "summary_large_image", title: post.title, description },
   };
@@ -65,7 +67,7 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
     url: `${siteUrl}/blog/${post.slug}`,
     image: new URL(post.coverImage, siteUrl).toString(),
     publisher: { "@type": "Organization", name: site.name },
-    author: { "@type": "Person", name: site.name },
+    author: { "@type": "Person", name: site.author, url: site.linkedin },
   };
 
   return (
@@ -78,7 +80,7 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
         <span aria-hidden="true">←</span> Back to the book
       </Link>
       <p className="mt-8 text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
-        <time dateTime={post.date}>{formatDate(post.date)}</time> · {post.readingMinutes} min read
+        By {site.author} · <time dateTime={post.date}>{formatDate(post.date)}</time> · {post.readingMinutes} min read
       </p>
       <h1 className="mt-3 font-serif text-4xl font-semibold leading-[1.12] tracking-tight sm:text-[3.25rem]">
         {post.title}
@@ -110,7 +112,8 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
       </figure>
       <div className="prose-ff mt-10" dangerouslySetInnerHTML={{ __html: html }} />
 
-      <p className="mt-14 border-t border-line pt-6 text-sm text-muted">{site.disclaimer}</p>
+      <AuthorCard />
+      <p className="mt-8 text-sm text-muted">{site.disclaimer}</p>
 
       {(newer || older) && (
         <nav aria-label="More posts" className="mt-10 grid gap-4 sm:grid-cols-2">

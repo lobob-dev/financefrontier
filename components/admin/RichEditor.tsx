@@ -125,7 +125,7 @@ export const RichEditor = memo(function RichEditor({ initial, onChange, onStatus
   }, [editor]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-soft">
+    <div className="rounded-2xl border border-line bg-surface shadow-soft">
       {editor && <Toolbar editor={editor} onPickImages={setup.insertImages} />}
       {editor && <ImageDetails editor={editor} />}
       <div className="px-5 py-6 sm:px-8">
@@ -181,10 +181,10 @@ function Toolbar({ editor, onPickImages }: { editor: Editor; onPickImages: (file
     <div
       role="toolbar"
       aria-label="Formatting"
-      className="sticky top-16 z-10 flex flex-wrap items-center gap-0.5 border-b border-line bg-surface/95 px-2 py-1.5 backdrop-blur"
+      className="sticky top-16 z-10 flex flex-wrap items-center gap-0.5 rounded-t-2xl border-b border-line bg-surface/95 px-2 py-1.5 backdrop-blur"
     >
-      <ToolButton label="Heading" active={s.h2} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>H2</ToolButton>
-      <ToolButton label="Subheading" active={s.h3} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</ToolButton>
+      <ToolButton label="Heading" active={s.h2} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><span className="px-1 text-[13px]">Heading</span></ToolButton>
+      <ToolButton label="Subheading" active={s.h3} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}><span className="px-1 text-[13px]">Subheading</span></ToolButton>
       {sep}
       <ToolButton label="Bold" active={s.bold} onClick={() => editor.chain().focus().toggleBold().run()}><b>B</b></ToolButton>
       <ToolButton label="Italic" active={s.italic} onClick={() => editor.chain().focus().toggleItalic().run()}><i className="font-serif">I</i></ToolButton>

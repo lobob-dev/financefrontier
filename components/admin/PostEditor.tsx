@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import Link from "next/link";
 import type { AdminPost } from "@/lib/types";
 import type { DocNode } from "@/lib/content/doc";
-import { readingMinutes, wordCount } from "@/lib/content/doc";
+import { docText, readingMinutes, wordCount } from "@/lib/content/doc";
 import { renderDoc } from "@/lib/content/render";
 import { formatDate, slugify } from "@/lib/format";
 import { deletePost, publishPost, savePost, unpublishPost, type PostInput, type SaveResult } from "@/app/admin/actions";
@@ -168,6 +168,27 @@ export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTa
   }
 
   const words = wordCount(content);
+  const imagesWithoutAlt = countImagesWithoutAlt(content);
+  const checklist = [
+    { done: title.trim().length > 0, label: "Title", hint: "Needed before you can publish." },
+    { done: words >= 50, label: "At least a few paragraphs", hint: `${words} words so far.` },
+    { done: excerpt.trim().length > 0, label: "Excerpt", hint: "Shown on the book page and in the list." },
+    { done: !!coverUrl, label: "Cover image", hint: "Without one, a plain illustration is used." },
+    { done: !coverUrl || coverAlt.trim().length > 0, label: "Cover image description", hint: "Helps readers using screen readers." },
+    { done: imagesWithoutAlt === 0, label: "Alt text on every picture", hint: `${imagesWithoutAlt} picture${imagesWithoutAlt === 1 ? "" : "s"} still need it. Click a picture to add it.` },
+    { done: tags.length > 0, label: "At least one tag", hint: "Helps readers find related posts." },
+  ];
+  const remaining = checklist.filter((c) => !c.done).length;
+
+  function excerptFromFirstParagraph() {
+    const first = (content.content ?? []).find((n) => n.type === "paragraph" && docText(n).trim().length > 40);
+    if (!first) {
+      setNotice("Write a first paragraph, then press this again.");
+      return;
+    }
+    const text = docText(first).replace(/\s+/g, " ").trim();
+    setExcerpt(text.length > 300 ? `${text.slice(0, text.lastIndexOf(" ", 297))}…` : text);
+  }
   const previewHtml = useMemo(() => (view === "preview" ? renderDoc(content) : ""), [view, content]);
 
   return (
@@ -178,6 +199,20 @@ export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTa
         </Link>
         <div className="flex items-center gap-3">
           <SaveBadge state={save} dirty={dirty} />
+          <button type="button" className="btn-quiet hidden sm:inline-flex" onClick={() => void saveNow()} disabled={save.kind === "saving"}>
+            Save now
+          </button>
+          {post.status === "draft" && (
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={pending || !title.trim()}
+              title={title.trim() ? undefined : "Add a title first"}
+              onClick={() => runPublish(null)}
+            >
+              Publish
+            </button>
+          )}
           <div role="tablist" aria-label="Editor view" className="flex rounded-full bg-bg-soft p-1">
             {(["write", "preview"] as const).map((v) => (
               <button
@@ -207,14 +242,15 @@ export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTa
               value={title}
               maxLength={200}
               onChange={(e) => setTitle(e.target.value.replace(/\n/g, " "))}
-              placeholder="Post title"
+              placeholder="Give your post a title"
               className="field-sizing-content w-full resize-none bg-transparent font-serif text-4xl font-semibold leading-tight tracking-tight text-ink outline-none placeholder:text-muted/70 sm:text-5xl"
             />
-            <div className="mt-6">
+            <WritingTips />
+            <div className="mt-4">
               <RichEditor initial={initial.content} onChange={setContent} onStatus={setNotice} />
             </div>
             <p className="mt-2 text-xs text-muted">
-              {words} words · about {readingMinutes(content)} min read · Ctrl+S saves straight away
+              {words} words · about {readingMinutes(content)} min read · Your work saves by itself as you type
             </p>
           </div>
 
@@ -244,7 +280,7 @@ export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTa
 
         <aside className="space-y-6 lg:sticky lg:top-20 lg:self-start" aria-label="Post settings">
           <section className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
-            <h2 className="text-sm font-semibold text-ink">Status</h2>
+            <h2 className="text-sm font-semibold text-ink">Publishing</h2>
             <p className="mt-1 text-sm text-ink-soft">
               {isLive && <>Published on {formatDate(post.publishedAt!)}.</>}
               {isScheduled && <>Scheduled for {publishedAt!.toLocaleString()}.</>}
@@ -268,6 +304,30 @@ export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTa
                   View post
                 </a>
               )}
+            </div>
+            <div className="mt-5 border-t border-line pt-4">
+              <p className="text-sm font-semibold text-ink">
+                {remaining === 0 ? "Ready to publish ✓" : `Ready to publish? ${remaining} thing${remaining === 1 ? "" : "s"} to check`}
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {checklist.map((c) => (
+                  <li key={c.label} className="flex gap-2 text-sm">
+                    <span
+                      aria-hidden="true"
+                      className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
+                        c.done ? "bg-accent-strong text-on-accent" : "border border-line text-transparent"
+                      }`}
+                    >
+                      ✓
+                    </span>
+                    <span className={c.done ? "text-ink-soft" : "text-ink"}>
+                      <span className="sr-only">{c.done ? "Done: " : "To do: "}</span>
+                      {c.label}
+                      {!c.done && <span className="block text-xs text-muted">{c.hint}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
             <div className="mt-5 border-t border-line pt-4">
               <label htmlFor="schedule" className="label">{isScheduled ? "Change the publish time" : "Schedule for later"}</label>
@@ -327,7 +387,12 @@ export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTa
                 onChange={(e) => setExcerpt(e.target.value)}
                 placeholder="Two or three sentences. Shown on the book page and in the post list."
               />
-              <p className="hint">{excerpt.length}/600</p>
+              <div className="mt-1.5 flex items-center justify-between gap-2">
+                <button type="button" onClick={excerptFromFirstParagraph} className="text-xs font-semibold text-accent-strong hover:underline">
+                  Use my first paragraph
+                </button>
+                <span className="text-xs text-muted">{excerpt.length}/600</span>
+              </div>
             </div>
             <TagInput value={tags} onChange={setTags} suggestions={knownTags} />
           </section>
@@ -391,5 +456,29 @@ function SaveBadge({ state, dirty }: { state: SaveState; dirty: boolean }) {
     >
       {text}
     </p>
+  );
+}
+
+function countImagesWithoutAlt(node: DocNode): number {
+  const own = node.type === "image" && !String(node.attrs?.alt ?? "").trim() ? 1 : 0;
+  return own + (node.content ?? []).reduce((sum, child) => sum + countImagesWithoutAlt(child), 0);
+}
+
+/** A small, foldable reminder of how the editor works. */
+function WritingTips() {
+  return (
+    <details className="group mt-4 rounded-xl border border-line bg-surface/60 px-4 py-2.5 text-sm text-ink-soft">
+      <summary className="cursor-pointer select-none font-medium text-ink marker:text-accent">Writing tips</summary>
+      <ul className="mt-2 grid gap-x-6 gap-y-1.5 pb-1 sm:grid-cols-2">
+        <li>Select words, then press <b>B</b>, <i>I</i> or the link button.</li>
+        <li>Type <code>## </code> at the start of a line for a heading.</li>
+        <li>Type <code>- </code> or <code>1. </code> to start a list.</li>
+        <li>Drag a picture onto the page, or paste one.</li>
+        <li>Click a picture to add alt text and a caption.</li>
+        <li>Use the table button for figures and comparisons.</li>
+        <li>Ctrl+Z undoes, Ctrl+S saves straight away.</li>
+        <li>Press <b>Preview</b> to see it the way readers will.</li>
+      </ul>
+    </details>
   );
 }

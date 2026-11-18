@@ -1,4 +1,5 @@
 import { SiteFooter, SiteHeader } from "./SiteHeader";
+import { LinkedInPopup } from "./LinkedInPopup";
 
 export function PageShell({ children, width = "max-w-3xl" }: { children: React.ReactNode; width?: string }) {
   return (
@@ -8,6 +9,7 @@ export function PageShell({ children, width = "max-w-3xl" }: { children: React.R
         {children}
       </main>
       <SiteFooter />
+      <LinkedInPopup />
     </div>
   );
 }

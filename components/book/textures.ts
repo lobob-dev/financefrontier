@@ -522,7 +522,7 @@ function drawCoverBack(ctx: Ctx, mode: CoverMode): Region[] {
 
   ctx.fillStyle = ink.ink;
   ctx.font = `600 66px ${SERIF}`;
-  ctx.fillText("About me", left - 3, 262);
+  ctx.fillText(site.author, left - 3, 262);
 
   ctx.fillStyle = ink.foil;
   roundRectPath(ctx, left, 296, 64, 6, 3);
@@ -555,9 +555,15 @@ function drawCoverBack(ctx: Ctx, mode: CoverMode): Region[] {
     h: 62,
     action: { type: "link", href: `mailto:${site.contactEmail}` },
   });
+  y += 52;
+  ctx.font = `600 23px ${SANS}`;
+  const li = "Connect on LinkedIn  ↗";
+  ctx.fillText(li, left, y);
+  const lw = ctx.measureText(li).width;
+  regions.push({ x: left - 10, y: y - 34, w: lw + 20, h: 50, action: { type: "link", href: site.linkedin } });
 
   // archive link
-  y += 86;
+  y += 76;
   const label = "Browse every post  →";
   ctx.font = `600 22px ${SANS}`;
   const bw = ctx.measureText(label).width + 56;

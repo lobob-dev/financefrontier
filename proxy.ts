@@ -28,6 +28,11 @@ export async function proxy(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
+  if (request.nextUrl.pathname === "/login" && data?.claims) {
+    const toAdmin = NextResponse.redirect(new URL("/admin", request.url));
+    for (const cookie of response.cookies.getAll()) toAdmin.cookies.set(cookie);
+    return toAdmin;
+  }
   if (isAdminPath && !data?.claims) {
     const redirect = NextResponse.redirect(new URL("/login", request.url));
     for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);

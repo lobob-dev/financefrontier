@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   title: { default: `${site.name} · ${site.tagline}`, template: `%s · ${site.name}` },
   description: site.description,
   applicationName: site.name,
+  authors: [{ name: site.author, url: site.linkedin }],
+  creator: site.author,
   alternates: {
     canonical: "/",
     types: { "application/rss+xml": [{ url: "/rss.xml", title: `${site.name} RSS feed` }] },
