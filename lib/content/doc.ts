@@ -25,7 +25,9 @@ export function docText(node: DocNode | undefined): string {
   if (!node) return "";
   if (node.type === "text") return node.text ?? "";
   const parts = (node.content ?? []).map(docText);
-  const block = ["paragraph", "heading", "blockquote", "codeBlock", "listItem", "image"].includes(node.type);
+  const block = ["paragraph", "heading", "blockquote", "codeBlock", "listItem", "image", "tableCell", "tableHeader"].includes(
+    node.type,
+  );
   const caption = node.type === "image" ? String(node.attrs?.caption ?? "") : "";
   return parts.join(block ? " " : "") + (caption ? ` ${caption}` : "") + (block ? "\n" : "");
 }

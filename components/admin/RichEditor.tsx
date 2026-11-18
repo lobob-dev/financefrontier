@@ -6,6 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
+import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import { common, createLowlight } from "lowlight";
 import type { DocNode } from "@/lib/content/doc";
 import { safeHref } from "@/lib/content/render";
@@ -47,6 +48,10 @@ const extensions = [
   }),
   CodeBlockLowlight.configure({ lowlight, defaultLanguage: null }),
   Figure.configure({ allowBase64: false }),
+  Table.configure({ resizable: false }),
+  TableRow,
+  TableHeader,
+  TableCell,
   Placeholder.configure({ placeholder: "Start writing. Drag images straight into the page." }),
 ];
 
@@ -148,6 +153,7 @@ function Toolbar({ editor, onPickImages }: { editor: Editor; onPickImages: (file
       ordered: e.isActive("orderedList"),
       quote: e.isActive("blockquote"),
       code: e.isActive("codeBlock"),
+      table: e.isActive("table"),
       canUndo: e.can().undo(),
       canRedo: e.can().redo(),
     }),
@@ -188,11 +194,35 @@ function Toolbar({ editor, onPickImages }: { editor: Editor; onPickImages: (file
       <ToolButton label="Numbered list" active={s.ordered} onClick={() => editor.chain().focus().toggleOrderedList().run()}><Icon d="M10 6h10M10 12h10M10 18h10M4 5h1.5v4M4 9h3M4 15.5a1.5 1.5 0 0 1 3 0c0 1.5-3 2-3 3.5h3" /></ToolButton>
       <ToolButton label="Quote" active={s.quote} onClick={() => editor.chain().focus().toggleBlockquote().run()}><Icon d="M7 7h4v4c0 3-2 5-4 6M15 7h4v4c0 3-2 5-4 6" /></ToolButton>
       <ToolButton label="Code block" active={s.code} onClick={() => editor.chain().focus().toggleCodeBlock().run()}><Icon d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14" /></ToolButton>
+      <ToolButton label="Insert table" active={s.table} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Icon d="M4 5h16v14H4zM4 10h16M4 15h16M10 5v14M15 5v14" /></ToolButton>
       {sep}
       <ToolButton label="Insert image" onClick={() => fileRef.current?.click()}><Icon d="M4 5h16v14H4zM4 15l4.5-4.5 4 4L15 12l5 5M15.5 8.5h.01" /></ToolButton>
       {sep}
       <ToolButton label="Undo" onClick={() => editor.chain().focus().undo().run()} disabled={!s.canUndo}><Icon d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></ToolButton>
       <ToolButton label="Redo" onClick={() => editor.chain().focus().redo().run()} disabled={!s.canRedo}><Icon d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" /></ToolButton>
+      {s.table && (
+        <span className="ml-1 flex flex-wrap items-center gap-1 text-xs font-medium">
+          {(
+            [
+              ["Add row", () => editor.chain().focus().addRowAfter().run()],
+              ["Add column", () => editor.chain().focus().addColumnAfter().run()],
+              ["Delete row", () => editor.chain().focus().deleteRow().run()],
+              ["Delete column", () => editor.chain().focus().deleteColumn().run()],
+              ["Delete table", () => editor.chain().focus().deleteTable().run()],
+            ] as const
+          ).map(([label, run]) => (
+            <button
+              key={label}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={run}
+              className="rounded-md px-2 py-1 text-ink-soft ring-1 ring-line hover:text-accent-strong"
+            >
+              {label}
+            </button>
+          ))}
+        </span>
+      )}
       <input
         ref={fileRef}
         type="file"

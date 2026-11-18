@@ -21,13 +21,16 @@ export function tagSlug(tag: string) {
 
 /** Turns a title into a web address, such as "Margin of Safety" into "margin-of-safety". */
 export function slugify(text: string) {
-  return text
+  const slug = text
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['\u2018\u2019]/g, "")
     .replace(/&/g, " and ")
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80)
-    .replace(/-+$/g, "");
+    .replace(/^-+|-+$/g, "");
+  if (slug.length <= 80) return slug;
+  // cut long addresses at a whole word
+  const cut = slug.slice(0, 81);
+  return cut.slice(0, cut.lastIndexOf("-")).replace(/-+$/g, "");
 }

@@ -129,6 +129,25 @@ function renderNode(node: DocNode, used: Map<string, number>): string {
       const cls = language ? `hljs language-${language}` : "hljs";
       return `<pre><code class="${cls}">${highlight(plain(node), language)}</code></pre>`;
     }
+    case "table":
+      return `<div class="table-wrap"><table><tbody>${inner()}</tbody></table></div>`;
+    case "tableRow":
+      return `<tr>${inner()}</tr>`;
+    case "tableHeader":
+    case "tableCell": {
+      const tag = node.type === "tableHeader" ? "th" : "td";
+      const span = (name: string) => {
+        const n = Math.floor(Number(node.attrs?.[name]) || 1);
+        return n > 1 && n <= 20 ? ` ${name}="${n}"` : "";
+      };
+      // a cell holding a single paragraph is written without the <p>, so rows stay compact
+      const kids = node.content ?? [];
+      const body =
+        kids.length === 1 && kids[0].type === "paragraph"
+          ? (kids[0].content ?? []).map((c) => renderNode(c, used)).join("")
+          : inner();
+      return `<${tag}${span("colspan")}${span("rowspan")}>${body}</${tag}>`;
+    }
     case "image": {
       const src = safeSrc(node.attrs?.src);
       if (!src) return "";
@@ -148,6 +167,7 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedTags: [
     "p", "h2", "h3", "h4", "strong", "em", "u", "s", "code", "pre", "a", "ul", "ol", "li",
     "blockquote", "br", "hr", "figure", "figcaption", "img", "span",
+    "div", "table", "tbody", "tr", "th", "td",
   ],
   allowedAttributes: {
     a: ["href", "rel", "target"],
@@ -158,8 +178,12 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
     h4: ["id"],
     code: ["class"],
     span: ["class"],
+    div: ["class"],
+    th: ["colspan", "rowspan"],
+    td: ["colspan", "rowspan"],
   },
   allowedClasses: {
+    div: ["table-wrap"],
     code: ["hljs", "language-*"],
     span: ["hljs-*"],
   },

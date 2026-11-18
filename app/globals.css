@@ -325,6 +325,49 @@ body {
   color: var(--muted);
 }
 
+.prose-ff .table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.prose-ff table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.prose-ff th,
+.prose-ff td {
+  padding: 0.65rem 0.9rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  min-width: 6rem;
+}
+.prose-ff tr:last-child > * {
+  border-bottom: 0;
+}
+.prose-ff th {
+  background: var(--bg-soft);
+  color: var(--ink);
+  font-weight: 600;
+}
+.prose-ff td > p,
+.prose-ff th > p {
+  margin: 0;
+}
+/* in the editor, tables are edited in place */
+.editor-surface table {
+  border: 1px solid var(--line);
+}
+.editor-surface .selectedCell {
+  background: var(--accent-soft);
+}
+.editor-surface .tableWrapper {
+  overflow-x: auto;
+}
+
 /* code highlighting colours, readable on the dark code background in both themes */
 .hljs-comment, .hljs-quote { color: #7f9a97; font-style: italic; }
 .hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-type { color: #7cc3f2; }
