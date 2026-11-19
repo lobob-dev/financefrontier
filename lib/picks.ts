@@ -2,7 +2,7 @@ import "server-only";
 import { getPublishedPostsWithContent } from "./posts";
 import type { DocNode } from "./content/doc";
 import { hasSnapshotContent, parsePrice, quoteSymbol, readSnapshot, type StockSnapshot, type Verdict } from "./content/stock";
-import { benchmarkFor, getCloseBefore, getQuote, type Quote } from "./market";
+import { benchmarkFor, getCloseBefore, getHistory, getQuote, type Quote } from "./market";
 
 export type { Quote };
 
@@ -19,6 +19,8 @@ export type Pick = {
   vsMarket: number | null;
   /** Whether the call has gone the right way compared with the market. */
   ahead: boolean | null;
+  /** About forty closing prices from the call to today, for a sparkline. */
+  trend: number[];
 };
 
 export function snapshotsIn(node: DocNode, out: StockSnapshot[] = []) {
@@ -50,7 +52,13 @@ export async function buildPick(post: { slug: string; title: string; date: strin
   const change = quote && priceThen && sameCurrency ? (quote.price / priceThen - 1) * 100 : null;
   const vsMarket = change !== null && benchmark.change !== null ? change - benchmark.change : null;
   const ahead = vsMarket === null ? null : positive(snapshot.verdict) ? vsMarket > 0 : vsMarket < 0;
-  return { post, snapshot, symbol, priceThen, quote, change, benchmark, vsMarket, ahead };
+  // The end date comes from the quote, not the clock, so cached pages stay consistent.
+  const history = symbol && quote ? await getHistory(symbol, post.date, quote.asOf) : null;
+  const points = history?.points ?? [];
+  const step = Math.max(1, Math.ceil(points.length / 40));
+  const trend = points.filter((_, i) => i % step === 0 || i === points.length - 1).map((p) => p.close);
+  if (trend.length && quote) trend.push(quote.price);
+  return { post, snapshot, symbol, priceThen, quote, change, benchmark, vsMarket, ahead, trend };
 }
 
 /** Every company snapshot in a published post, newest post first. */

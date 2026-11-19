@@ -83,21 +83,29 @@ function spacedText(
   return total;
 }
 
-function drawImageCover(
-  ctx: Ctx,
-  img: HTMLImageElement,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-) {
+/** Draws the whole picture inside the box, centred, without cutting anything off. */
+function drawImageContain(ctx: Ctx, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
   const iw = img.naturalWidth || img.width;
   const ih = img.naturalHeight || img.height;
   if (!iw || !ih) return;
-  const scale = Math.max(w / iw, h / ih);
-  const sw = w / scale;
-  const sh = h / scale;
-  ctx.drawImage(img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, x, y, w, h);
+  const scale = Math.min(w / iw, h / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+/** The frame for a picture: its own shape, kept within the space available and never wafer-thin. */
+function fitFrame(img: HTMLImageElement | null, maxW: number, maxH: number, minH: number) {
+  const iw = img?.naturalWidth || img?.width || 0;
+  const ih = img?.naturalHeight || img?.height || 0;
+  if (!iw || !ih) return { w: maxW, h: Math.round(maxW * 0.8) };
+  let w = maxW;
+  let h = (w * ih) / iw;
+  if (h > maxH) {
+    h = maxH;
+    w = (h * iw) / ih;
+  }
+  return { w: Math.round(w), h: Math.round(Math.max(h, minH)) };
 }
 
 /** Small deterministic random generator so the paper grain is stable. */
@@ -257,9 +265,9 @@ function drawPostText(
     ctx.save();
     roundRectPath(ctx, left, 112, width, ih, 18);
     ctx.clip();
-    ctx.fillStyle = C.mintSoft;
+    ctx.fillStyle = img ? "#FFFFFF" : C.mintSoft;
     ctx.fillRect(left, 112, width, ih);
-    if (img) drawImageCover(ctx, img, left, 112, width, ih);
+    if (img) drawImageContain(ctx, img, left, 112, width, ih);
     ctx.restore();
     y = 112 + ih + 62;
   }
@@ -349,9 +357,12 @@ function drawPostImage(
 ): Region[] {
   drawPaper(ctx, TEX_W, TEX_H, "left", 200 + index);
   runningHead(ctx, "left", post.tags[0] ?? site.tagline);
-  const left = 75;
-  const width = TEX_W - 75 - 95;
-  const ih = Math.round(width * 0.8);
+  const area = TEX_W - 75 - 95;
+  // the frame takes the picture's own shape, so logos and charts are never cropped
+  const frame = fitFrame(img, area, Math.round(area * 1.05), Math.round(area * 0.42));
+  const width = frame.w;
+  const ih = frame.h;
+  const left = 75 + Math.round((area - width) / 2);
   const iy = 196;
 
   // plate with a soft shadow
@@ -371,26 +382,31 @@ function drawPostImage(
   g.addColorStop(1, C.skySoft);
   ctx.fillStyle = g;
   ctx.fillRect(left, iy, width, ih);
-  if (img) drawImageCover(ctx, img, left, iy, width, ih);
+  if (img) {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(left, iy, width, ih);
+    drawImageContain(ctx, img, left, iy, width, ih);
+  }
   ctx.restore();
 
-  // caption
+  // caption (lined up with the text column, whatever the picture's shape)
+  const textLeft = 75;
   let y = iy + ih + 62;
   ctx.fillStyle = C.accentStrong;
   ctx.font = `600 16px ${SANS}`;
-  spacedText(ctx, `NOTE ${pad2(index + 1)}`, left, y, 3.2);
+  spacedText(ctx, `NOTE ${pad2(index + 1)}`, textLeft, y, 3.2);
   y += 40;
   ctx.fillStyle = C.inkSoft;
   ctx.font = `italic 400 25px ${SERIF}`;
-  wrapLines(ctx, post.title, width, 2).forEach((line, i) => {
-    ctx.fillText(line, left, y + i * 34);
+  wrapLines(ctx, post.title, area, 2).forEach((line, i) => {
+    ctx.fillText(line, textLeft, y + i * 34);
   });
 
   // large numeral
   ctx.fillStyle = "rgba(18,167,124,0.13)";
   ctx.font = `300 230px ${SERIF}`;
   ctx.textAlign = "right";
-  ctx.fillText(pad2(index + 1), left + width + 6, TEX_H - 96);
+  ctx.fillText(pad2(index + 1), 75 + area + 6, TEX_H - 96);
   ctx.textAlign = "left";
 
   pageNumber(ctx, "left", 2 * (index + 1));

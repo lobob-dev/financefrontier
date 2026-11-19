@@ -45,7 +45,8 @@ function Horizon({ className = "" }: { className?: string }) {
   );
 }
 
-function Cover() {
+/** The closed cover, also shown as a placeholder while the 3D book loads. */
+export function Cover() {
   const [first, ...rest] = site.name.split(" ");
   return (
     <div
@@ -154,7 +155,7 @@ function PostImage({ post, index }: { post: PostSummary; index: number }) {
           src={post.coverImage}
           alt={post.coverAlt}
           loading="lazy"
-          className="aspect-[5/4] w-full rounded-[2.5cqw] object-cover shadow-soft"
+          className="max-h-[70cqw] w-full rounded-[2.5cqw] bg-white object-contain shadow-soft"
         />
         <p className="mt-[6cqw] text-[length:2cqw] font-semibold uppercase tracking-[0.2em] text-[#0A7A5C]">
           Note {pad2(index + 1)}

@@ -10,8 +10,12 @@ export type BookStore = {
   /** Pointer position from -1 to 1, for a hint of parallax. */
   px: number;
   py: number;
+  /** Progress of the first-visit opening scene, 0 to 1. 1 means no scene to play. */
+  introT: number;
+  /** How far the book has flown in during that scene, 0 (far away) to 1 (in place). Shared with the camera. */
+  introFly: number;
 };
 
 export function createBookStore(): BookStore {
-  return { target: 0, p: 0, zoom: 0, zoomT: 0, px: 0, py: 0 };
+  return { target: 0, p: 0, zoom: 0, zoomT: 0, px: 0, py: 0, introT: 1, introFly: 1 };
 }

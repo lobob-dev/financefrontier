@@ -34,7 +34,7 @@ export const viewport: Viewport = {
  * The site opens in dark mode. This runs before the page paints, so a visitor
  * who has switched to light mode never sees a flash of the dark theme.
  */
-const themeScript = `(function(){try{if(localStorage.getItem('ff-theme')==='light'){document.documentElement.dataset.theme='light'}}catch(e){}})()`;
+const themeScript = `(function(){var d=document.documentElement;d.classList.add('js');try{if(localStorage.getItem('ff-theme')==='light'){d.dataset.theme='light'}}catch(e){}})()`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

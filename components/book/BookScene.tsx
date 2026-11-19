@@ -31,7 +31,8 @@ function CameraRig({ store, postCount, compact }: { store: React.RefObject<BookS
     const dOpen = compact ? fit(PAGE_W * 1.1, PAGE_H * 1.46) : fit(PAGE_W * 2 * 1.13, PAGE_H * 1.4);
     // ease back a little while a cover swings toward the viewer
     const swing = Math.sin(Math.PI * clamp(s.p, 0, 1)) + Math.sin(Math.PI * clamp(s.p - (postCount + 1), 0, 1));
-    const d = lerp(dClosed, dOpen, open) + swing * 0.9;
+    // during the first-visit opening scene the camera starts far back and glides in
+    const d = lerp(dClosed, dOpen, open) + swing * 0.9 + (1 - s.introFly) * 6;
     const x = compact ? PAGE_W * 0.5 * open : 0;
     const y = (compact ? lerp(0.075, 0.13, open) : 0.075) * d * tan; // sit the book a touch above centre, clear of the controls
     const z = smooth(clamp(s.zoomT, 0, 1));
@@ -86,6 +87,16 @@ function PointerTracker({ store }: { store: React.RefObject<BookStore> }) {
   return null;
 }
 
+type Light = { key: string; keyBoost: number; ambient: number; fill: string; lamp: number; paper: [number, number, number]; label: string };
+
+/** Lighting that follows the visitor's own clock. Subtle on purpose: the pages must stay easy to read. */
+function lightForHour(hour: number): Light {
+  if (hour >= 5 && hour < 10) return { key: "#FFE6C4", keyBoost: 1.05, ambient: 1, fill: "#FFE9D2", lamp: 0, paper: [1, 0.985, 0.95], label: "morning" };
+  if (hour >= 10 && hour < 17) return { key: "#FFFFFF", keyBoost: 1, ambient: 1, fill: "#CDEBFF", lamp: 0, paper: [1, 1, 1], label: "day" };
+  if (hour >= 17 && hour < 21) return { key: "#FFD3A3", keyBoost: 0.95, ambient: 0.92, fill: "#C9D6FF", lamp: 0.25, paper: [1, 0.965, 0.91], label: "evening" };
+  return { key: "#FFEBD0", keyBoost: 0.82, ambient: 0.8, fill: "#9FB8FF", lamp: 0.55, paper: [0.97, 0.94, 0.88], label: "night" };
+}
+
 export type BookSceneProps = {
   posts: PostSummary[];
   store: React.RefObject<BookStore>;
@@ -98,6 +109,11 @@ export type BookSceneProps = {
 export default function BookScene({ posts, store, compact, dark, onAction, onReady }: BookSceneProps) {
   const [textures, setTextures] = useState<BookTextures | null>(null);
   const [maxDpr, setMaxDpr] = useState(2);
+  // "?hour=21" in the address previews another time of day
+  const [light] = useState(() => {
+    const forced = Number(new URLSearchParams(window.location.search).get("hour"));
+    return lightForHour(Number.isInteger(forced) && forced >= 0 && forced < 24 && window.location.search.includes("hour=") ? forced : new Date().getHours());
+  });
 
   useEffect(() => {
     let alive = true;
@@ -124,9 +140,11 @@ export default function BookScene({ posts, store, compact, dark, onAction, onRea
       style={{ touchAction: "pan-y" }}
     >
       <PerformanceMonitor onDecline={() => setMaxDpr((d) => Math.max(1, d - 0.5))} />
-      <ambientLight intensity={dark ? 0.45 : 0.6} />
-      <directionalLight position={[-3, 4.5, 6]} intensity={dark ? 1.0 : 1.2} />
-      <directionalLight position={[4, 1, 3]} intensity={0.25} color="#CDEBFF" />
+      <ambientLight intensity={(dark ? 0.45 : 0.6) * light.ambient} />
+      <directionalLight position={[-3, 4.5, 6]} intensity={(dark ? 1.0 : 1.2) * light.keyBoost} color={light.key} />
+      <directionalLight position={[4, 1, 3]} intensity={0.25} color={light.fill} />
+      {/* in the evening and at night, a warm desk lamp glows from just above the book */}
+      {light.lamp > 0 && <pointLight position={[2.4, 2.6, 2.8]} intensity={light.lamp * 6} distance={12} decay={1.6} color="#FFB870" />}
       <Environment resolution={128} frames={1} environmentIntensity={dark ? 0.36 : 0.5}>
         <mesh scale={30}>
           <sphereGeometry args={[1, 16, 16]} />
@@ -142,7 +160,7 @@ export default function BookScene({ posts, store, compact, dark, onAction, onRea
       <GroundShadow store={store} postCount={posts.length} dark={dark} />
       <Particles dark={dark} />
       {textures && (
-        <Book posts={posts} store={store} textures={textures} dark={dark} onAction={onAction} onReady={onReady} />
+        <Book posts={posts} store={store} textures={textures} dark={dark} onAction={onAction} onReady={onReady} pageTint={light.paper} />
       )}
     </Canvas>
   );

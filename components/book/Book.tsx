@@ -158,9 +158,14 @@ type Props = {
   dark: boolean;
   onAction: (action: BookAction) => void;
   onReady: () => void;
+  /** A gentle colour cast on the paper for the time of day. */
+  pageTint?: [number, number, number];
 };
 
-export function Book({ posts, store, textures, dark, onAction, onReady }: Props) {
+/** Length of the first-visit opening scene, in seconds. */
+const INTRO_SECONDS = 2.8;
+
+export function Book({ posts, store, textures, dark, onAction, onReady, pageTint = [1, 1, 1] }: Props) {
   const n = posts.length;
   const outer = useRef<THREE.Group>(null);
   const inner = useRef<THREE.Group>(null);
@@ -250,10 +255,17 @@ export function Book({ posts, store, textures, dark, onAction, onReady }: Props)
     const p = s.p;
     const time = state.clock.elapsedTime;
 
+    // first-visit opening scene: fly in for the first 70%, then the cover lifts a little and settles
+    if (s.introT < 1) s.introT = Math.min(1, s.introT + dt / INTRO_SECONDS);
+    const fly = 1 - (1 - clamp(s.introT / 0.7, 0, 1)) ** 3;
+    s.introFly = fly;
+    const peekT = clamp((s.introT - 0.7) / 0.3, 0, 1);
+    const peek = s.introT < 1 && p < 0.05 ? Math.sin(Math.PI * peekT) ** 2 * 0.36 : 0;
+
     const o1 = smooth(clamp(p, 0, 1));
     const o2 = smooth(clamp(p - (n + 1), 0, 1));
     const open = o1 * (1 - o2);
-    const thC = Math.PI * o1;
+    const thC = Math.PI * o1 + peek;
     const thB = Math.PI * o2;
     const c = COVER_T;
 
@@ -271,11 +283,12 @@ export function Book({ posts, store, textures, dark, onAction, onReady }: Props)
     // pose: a slow float when closed, calm and readable when open
     const idle = lerp(1, 0.22, open) * (1 - s.zoomT);
     if (outer.current) {
-      outer.current.position.y = Math.sin(time * 0.9) * 0.04 * lerp(1, 0.5, open) * (1 - s.zoomT);
+      outer.current.position.y =
+        Math.sin(time * 0.9) * 0.04 * lerp(1, 0.5, open) * (1 - s.zoomT) - (1 - fly) * 0.55;
       outer.current.rotation.y =
-        lerp(0.5, 0, o1) + lerp(0, -0.24, o2) + Math.sin(time * 0.45) * 0.11 * idle + s.px * 0.06 * (1 - s.zoomT);
+        lerp(0.5, 0, o1) + lerp(0, -0.24, o2) + Math.sin(time * 0.45) * 0.11 * idle + s.px * 0.06 * (1 - s.zoomT) + (1 - fly) * 1.25;
       outer.current.rotation.x =
-        lerp(-0.08, -0.13, open) * (1 - s.zoomT) + Math.sin(time * 0.6 + 1) * 0.02 * idle - s.py * 0.035 * (1 - s.zoomT);
+        lerp(-0.08, -0.13, open) * (1 - s.zoomT) + Math.sin(time * 0.6 + 1) * 0.02 * idle - s.py * 0.035 * (1 - s.zoomT) + (1 - fly) * 0.3;
       outer.current.rotation.z = Math.sin(time * 0.5) * 0.014 * idle;
     }
     if (inner.current) {
@@ -347,7 +360,7 @@ export function Book({ posts, store, textures, dark, onAction, onReady }: Props)
       u.uBack.value = backTex;
       u.uHasBack.value = backTex ? 1 : 0;
       const tint = dark ? 0.9 : 1;
-      u.uTint.value.setRGB(tint, tint, dark ? 0.93 : 1);
+      u.uTint.value.setRGB(tint * pageTint[0], tint * pageTint[1], (dark ? 0.93 : 1) * pageTint[2]);
       if (j === k) {
         u.uShade.value.set(
           0.24 * smoothstep(0, 0.08, frac) * (1 - smoothstep(0.55, 1, frac)),

@@ -230,5 +230,8 @@ proxy.ts                   refreshes the sign-in session and guards /admin
 
 The book reads the newest 12 published posts (`bookPostLimit` in `lib/site.ts`). Each page is drawn
 onto a canvas and used as a texture on a bending sheet (`components/book/pageMaterial.ts`). Only the
-current and neighbouring pages exist at any moment. Visitors with reduced motion, low-power devices or
+current and neighbouring pages exist at any moment. While it loads, a picture of the closed cover is shown
+in its place. On a visitor's first visit the book flies in and the cover lifts slightly (once only).
+The lighting follows the visitor's clock (add `?hour=21` to the address to preview another time of day),
+and the speaker button in the bottom-left corner turns on a soft page-turn sound, made in the browser. Visitors with reduced motion, low-power devices or
 no WebGL get the HTML page-flip version instead; `?view=2d` or `?view=3d` forces either one.

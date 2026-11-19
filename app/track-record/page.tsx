@@ -4,6 +4,8 @@ import { PageShell } from "@/components/site/PageShell";
 import { getPicks, type Pick } from "@/lib/picks";
 import { VERDICTS, formatMoney, tradingViewSymbol, type Verdict } from "@/lib/content/stock";
 import { TradingViewChart } from "@/components/site/TradingViewChart";
+import { CountUp } from "@/components/site/CountUp";
+import { Sparkline } from "@/components/site/Sparkline";
 import { formatDate } from "@/lib/format";
 import { site } from "@/lib/site";
 
@@ -31,16 +33,30 @@ function Change({ value }: { value: number | null }) {
 }
 
 /** Points ahead of or behind the market, marked right or wrong for the verdict given. */
-function VsMarket({ pick }: { pick: Pick }) {
+function VsMarket({ pick, inline = false }: { pick: Pick; inline?: boolean }) {
   if (pick.vsMarket === null) return <span className="text-muted">—</span>;
   const v = pick.vsMarket;
+  if (inline) {
+    return (
+      <span className="text-ink-soft">
+        <span className={`font-semibold ${pick.ahead ? "text-accent-strong" : "text-[#d9634c]"}`}>
+          {v >= 0 ? "+" : "−"}
+          {Math.abs(v).toFixed(1)} pts
+        </span>{" "}
+        vs {pick.benchmark.name} · {pick.ahead ? "right call" : "wrong call"}
+      </span>
+    );
+  }
   return (
     <span className="whitespace-nowrap">
       <span className={`font-semibold ${pick.ahead ? "text-accent-strong" : "text-[#d9634c]"}`}>
         {v >= 0 ? "+" : "−"}
         {Math.abs(v).toFixed(1)} pts
       </span>
-      <span className="block text-xs text-muted">{pick.ahead ? "Right call" : "Wrong call"}</span>
+      <span className="block text-xs text-muted">
+        {pick.benchmark.name} {pick.benchmark.change !== null && `${pick.benchmark.change >= 0 ? "+" : "−"}${Math.abs(pick.benchmark.change).toFixed(1)}%`} ·{" "}
+        {pick.ahead ? "right call" : "wrong call"}
+      </span>
     </span>
   );
 }
@@ -55,10 +71,11 @@ export default async function TrackRecordPage() {
   const buys = priced.filter((p) => p.snapshot.verdict === "buy");
   const judged = picks.filter((p) => p.ahead !== null);
   const ahead = judged.filter((p) => p.ahead).length;
+  const buyAverage = buys.length ? average(buys.map((p) => p.change)) : null;
   const asOf = picks.map((p) => p.quote?.asOf).filter(Boolean).sort().at(-1);
 
   return (
-    <PageShell width="max-w-5xl">
+    <PageShell width="max-w-6xl">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">Accountability</p>
       <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight sm:text-5xl">Track record</h1>
       <p className="mt-4 max-w-2xl text-ink-soft">
@@ -73,20 +90,70 @@ export default async function TrackRecordPage() {
       ) : (
         <>
           <dl className="mt-10 grid gap-4 sm:grid-cols-3">
-            {[
-              { label: "Companies covered", value: String(picks.length) },
-              { label: "Average move of Buy calls", value: buys.length ? <Change value={average(buys.map((p) => p.change))} /> : "—" },
-              { label: "Calls ahead of the market", value: judged.length ? `${ahead} of ${judged.length}` : "—" },
-            ].map((s) => (
-              <div key={s.label} className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
-                <dt className="text-xs font-semibold uppercase tracking-wider text-muted">{s.label}</dt>
-                <dd className="mt-1 text-2xl font-semibold text-ink">{s.value}</dd>
-              </div>
-            ))}
+            <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-muted">Companies covered</dt>
+              <dd className="mt-1 text-2xl font-semibold text-ink"><CountUp value={picks.length} /></dd>
+            </div>
+            <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-muted">Average move of Buy calls</dt>
+              <dd className={`mt-1 text-2xl font-semibold ${(buyAverage ?? 0) >= 0 ? "text-accent-strong" : "text-[#d9634c]"}`}>
+                {buyAverage === null ? "—" : <CountUp value={buyAverage} decimals={1} prefix={buyAverage >= 0 ? "▲ " : "▼ −"} suffix="%" />}
+              </dd>
+            </div>
+            <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-muted">Calls ahead of the market</dt>
+              <dd className="mt-1 text-2xl font-semibold text-ink">
+                {judged.length ? (
+                  <>
+                    <CountUp value={ahead} /> <span className="text-base font-medium text-muted">of {judged.length}</span>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
           </dl>
 
-          <div className="mt-8 overflow-x-auto rounded-2xl border border-line bg-surface shadow-soft">
-            <table className="w-full min-w-[860px] text-left text-sm">
+          {/* phones and tablets: one card per call */}
+          <ul className="mt-8 grid gap-3 sm:grid-cols-2 xl:hidden">
+            {picks.map((p, i) => (
+              <li key={`${p.post.slug}-${p.snapshot.ticker}`} className="rounded-2xl border border-line bg-surface p-4 shadow-soft">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink">{p.snapshot.company || p.snapshot.ticker}</p>
+                    <p className="text-xs text-muted">
+                      {[p.snapshot.exchange !== "Other" ? p.snapshot.exchange : "", p.snapshot.ticker].filter(Boolean).join(": ")} · {formatDate(p.post.date)}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${verdictStyle[p.snapshot.verdict]}`}>
+                    {VERDICTS[p.snapshot.verdict].label}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-end justify-between gap-3">
+                  <div className="text-sm tabular-nums text-ink-soft">
+                    <p>
+                      {formatMoney(p.priceThen, p.snapshot.currency)} <span aria-hidden="true">→</span>{" "}
+                      {p.quote ? formatMoney(p.quote.price, p.quote.currency) : "—"}
+                    </p>
+                    <p className="mt-0.5 text-base"><Change value={p.change} /></p>
+                  </div>
+                  <Sparkline values={p.trend} up={(p.change ?? 0) >= 0} delay={i * 70} />
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
+                  <VsMarket pick={p} inline />
+                  <span className="flex shrink-0 gap-3">
+                    <Link href={`/blog/${p.post.slug}`} className="font-medium text-accent-strong hover:underline">Post</Link>
+                    {tradingViewSymbol(p.snapshot) && (
+                      <a href={`#${chartId(p)}`} className="font-medium text-accent-strong hover:underline">Chart ↓</a>
+                    )}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8 hidden overflow-x-auto rounded-2xl border border-line bg-surface shadow-soft xl:block">
+            <table className="w-full min-w-[900px] text-left text-sm">
               <caption className="sr-only">Every pick with its price then and now</caption>
               <thead className="bg-bg-soft text-xs uppercase tracking-wider text-muted">
                 <tr>
@@ -95,14 +162,14 @@ export default async function TrackRecordPage() {
                   <th scope="col" className="px-4 py-3 font-semibold">Written</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Price then</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Price now</th>
+                  <th scope="col" className="px-4 py-3 font-semibold"><span className="sr-only">Price since the call</span></th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Since</th>
-                  <th scope="col" className="px-4 py-3 text-right font-semibold">Market</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Vs market</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold"><span className="sr-only">Chart</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {picks.map((p) => (
+                {picks.map((p, i) => (
                   <tr key={`${p.post.slug}-${p.snapshot.ticker}`}>
                     <td className="px-4 py-3">
                       <span className="block font-semibold text-ink">{p.snapshot.company || p.snapshot.ticker}</span>
@@ -125,12 +192,11 @@ export default async function TrackRecordPage() {
                     <td className="px-4 py-3 text-right tabular-nums">
                       {p.quote ? formatMoney(p.quote.price, p.quote.currency) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      <Change value={p.change} />
+                    <td className="px-2 py-3">
+                      <Sparkline values={p.trend} up={(p.change ?? 0) >= 0} delay={i * 70} />
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      <span className="block text-ink-soft">{p.benchmark.change === null ? "—" : `${p.benchmark.change >= 0 ? "+" : "−"}${Math.abs(p.benchmark.change).toFixed(1)}%`}</span>
-                      <span className="text-xs text-muted">{p.benchmark.name}</span>
+                      <Change value={p.change} />
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       <VsMarket pick={p} />

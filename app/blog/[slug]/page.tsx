@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,6 +12,7 @@ import { TradingViewChart } from "@/components/site/TradingViewChart";
 import { PostGrid } from "@/components/site/PostGrid";
 import { ReadingProgress } from "@/components/site/ReadingProgress";
 import { GlossaryTips } from "@/components/site/GlossaryTips";
+import { TocNav } from "@/components/site/TocNav";
 import { formatDate, tagSlug } from "@/lib/format";
 import { site } from "@/lib/site";
 import { siteUrl } from "@/lib/env";
@@ -95,7 +96,14 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
   };
 
   return (
-    <article id="article" className="rise-in">
+    <article id="article" className="rise-in relative">
+      {headings.length >= 3 && (
+        <aside className="absolute left-full top-0 ml-10 hidden h-full w-52 2xl:ml-16 2xl:w-60 xl:block">
+          <div className="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2">
+            <TocNav headings={headings} />
+          </div>
+        </aside>
+      )}
       <ReadingProgress target="#article" />
       <GlossaryTips />
       <script
@@ -126,15 +134,17 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
         </ul>
       )}
       <figure className="mt-9">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={post.coverImage}
-          alt={post.coverAlt}
-          width={1600}
-          height={900}
-          fetchPriority="high"
-          className="aspect-[16/9] w-full rounded-2xl bg-bg-soft object-cover shadow-soft"
-        />
+        <ViewTransition name={`cover-${post.slug}`} share="morph" default="none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={post.coverImage}
+            alt={post.coverAlt}
+            width={1600}
+            height={900}
+            fetchPriority="high"
+            className="aspect-[16/9] w-full rounded-2xl bg-bg-soft object-cover shadow-soft"
+          />
+        </ViewTransition>
       </figure>
       {series.length > 1 && (
         <p className="mt-8 rounded-xl bg-accent-soft/60 px-4 py-3 text-sm text-ink">
@@ -143,7 +153,7 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
         </p>
       )}
       {headings.length >= 3 && (
-        <details open className="group mt-8 rounded-2xl border border-line bg-surface/70 px-5 py-4">
+        <details open className="group mt-8 rounded-2xl border border-line bg-surface/70 px-5 py-4 xl:hidden">
           <summary className="cursor-pointer select-none text-sm font-semibold uppercase tracking-[0.14em] text-accent-strong marker:text-accent">
             In this post
           </summary>

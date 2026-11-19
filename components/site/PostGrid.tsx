@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import Link from "next/link";
 import type { PostSummary } from "@/lib/types";
 import { formatDate } from "@/lib/format";
@@ -19,18 +20,21 @@ export function PostGrid({
         <li key={post.slug}>
           <Link
             href={`/blog/${post.slug}`}
+            prefetch={true}
             className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-soft transition hover:-translate-y-1 hover:shadow-lift"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={post.coverImage}
-              alt={post.coverAlt}
-              loading="lazy"
-              decoding="async"
-              width={1600}
-              height={1000}
-              className="aspect-[16/10] w-full bg-bg-soft object-cover"
-            />
+            <ViewTransition name={`cover-${post.slug}`} share="morph" default="none">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={post.coverImage}
+                alt={post.coverAlt}
+                loading="lazy"
+                decoding="async"
+                width={1600}
+                height={1000}
+                className="aspect-[16/10] w-full bg-bg-soft object-cover"
+              />
+            </ViewTransition>
             <div className="flex flex-1 flex-col p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-accent-strong">
                 <time dateTime={post.date}>{formatDate(post.date)}</time> · {post.readingMinutes} min read

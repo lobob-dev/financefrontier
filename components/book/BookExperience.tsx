@@ -9,13 +9,25 @@ import { site } from "@/lib/site";
 import { useTheme } from "@/components/site/useTheme";
 import { stepInfo, type BookAction } from "./constants";
 import { createBookStore } from "./store";
-import { FlipBook2D } from "./FlipBook2D";
+import { Cover, FlipBook2D } from "./FlipBook2D";
+import { playPageTurn, setSound, soundOn, subscribeSound } from "./sound";
 
 const BookScene = dynamic(() => import("./BookScene"), { ssr: false });
 
 type Mode = "3d" | "2d";
 const MODE_KEY = "ff-book-view";
 const STEP_KEY = "ff-book-step";
+const INTRO_KEY = "ff-book-intro";
+
+/** Whether this visitor has already seen the book's opening scene on this device. */
+function introSeen() {
+  try {
+    return localStorage.getItem(INTRO_KEY) === "seen";
+  } catch {
+    return true;
+  }
+}
+const noSubscribe = () => () => {};
 
 /** Decide once, on the visitor's device, whether the full 3D book is a good idea. */
 function detectMode(): Mode {
@@ -72,6 +84,7 @@ export default function BookExperience({ posts }: { posts: PostSummary[] }) {
   const theme = useTheme();
   const mode = useSyncExternalStore<Mode | null>(subscribeMode, getMode, () => null);
   const compact = useSyncExternalStore(subscribeCompact, getCompact, () => false);
+  const firstVisit = !useSyncExternalStore(noSubscribe, introSeen, () => true);
 
   const store = useRef(createBookStore());
   const spacer = useRef<HTMLDivElement>(null);
@@ -164,6 +177,11 @@ export default function BookExperience({ posts }: { posts: PostSummary[] }) {
     s.p = saved;
     s.zoom = 0;
     s.zoomT = 0;
+    // a first visit that starts at the cover gets the opening scene
+    if (saved === 0 && !introSeen()) {
+      s.introT = 0;
+      s.introFly = 0;
+    }
     const prevRestoration = history.scrollRestoration;
     history.scrollRestoration = "manual";
 
@@ -281,7 +299,25 @@ export default function BookExperience({ posts }: { posts: PostSummary[] }) {
     },
     [goTo, openPost, router],
   );
-  const onReady = useCallback(() => setReady(true), []);
+  const onReady = useCallback(() => {
+    setReady(true);
+    // remembered once the placeholder has faded away, so it never changes size while still visible
+    window.setTimeout(() => {
+      try {
+        localStorage.setItem(INTRO_KEY, "seen");
+      } catch {
+        // ignore
+      }
+    }, 3000);
+  }, []);
+
+  // a soft page-turn sound, for visitors who switch it on
+  const sound = useSyncExternalStore(subscribeSound, soundOn, () => false);
+  const lastStep = useRef(step);
+  useEffect(() => {
+    if (lastStep.current !== step) playPageTurn();
+    lastStep.current = step;
+  }, [step]);
 
   const label =
     info.kind === "cover"
@@ -334,13 +370,12 @@ export default function BookExperience({ posts }: { posts: PostSummary[] }) {
               onReady={onReady}
             />
           </div>
-          {!ready && (
-            <div className="fixed inset-0 z-10 grid place-items-center" role="status">
-              <p className="font-serif text-lg italic text-muted">Fetching the book from the shelf…</p>
-            </div>
-          )}
+
         </>
       )}
+
+      {/* the closed cover shows straight away, even before the page's code has loaded */}
+      {mode !== "2d" && <BookPlaceholder far={mode === "3d" && firstVisit} hidden={mode === "3d" && ready} />}
 
       {mode === "2d" && (
         <div className="fixed inset-0 z-0 grid place-items-center px-4 pb-36 pt-20">
@@ -458,6 +493,22 @@ export default function BookExperience({ posts }: { posts: PostSummary[] }) {
       {mode && (
         <button
           type="button"
+          onClick={() => setSound(!sound)}
+          aria-pressed={sound}
+          aria-label={sound ? "Turn page sounds off" : "Turn page sounds on"}
+          title={sound ? "Page sounds on" : "Page sounds off"}
+          className="fixed bottom-5 left-4 z-20 grid h-10 w-10 place-items-center rounded-full border border-line bg-surface/70 text-ink-soft shadow-soft backdrop-blur transition hover:text-accent-strong sm:bottom-7 sm:left-6"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4Z" />
+            {sound ? <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" /> : <path d="m16 9.5 5 5M21 9.5l-5 5" />}
+          </svg>
+        </button>
+      )}
+
+      {mode && (
+        <button
+          type="button"
           onClick={() => {
             const nextMode = mode === "3d" ? "2d" : "3d";
             setReady(false);
@@ -470,7 +521,7 @@ export default function BookExperience({ posts }: { posts: PostSummary[] }) {
             if (nextMode === "2d") window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
             chooseMode(nextMode);
           }}
-          className="fixed bottom-5 left-4 z-20 hidden rounded-full px-3 py-2 text-xs font-medium text-muted transition hover:text-accent-strong sm:left-6 sm:bottom-7 md:block"
+          className="fixed bottom-5 left-16 z-20 hidden rounded-full px-3 py-2 text-xs font-medium text-muted transition hover:text-accent-strong sm:bottom-7 sm:left-[4.75rem] md:block"
         >
           {mode === "3d" ? "Switch to simple view" : "Switch to 3D view"}
         </button>
@@ -482,6 +533,35 @@ export default function BookExperience({ posts }: { posts: PostSummary[] }) {
         style={{ opacity: leaving ? 1 : 0, transitionDelay: leaving ? "220ms" : "0ms" }}
         aria-hidden="true"
       />
+    </div>
+  );
+}
+
+/**
+ * Shown while the 3D book loads: the closed cover, floating where the 3D book will appear.
+ * On a first visit it waits small and far away, where the opening scene begins.
+ */
+function BookPlaceholder({ far, hidden }: { far: boolean; hidden: boolean }) {
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-10 grid place-items-center transition-opacity duration-700"
+      style={{ opacity: hidden ? 0 : 1 }}
+      role={hidden ? undefined : "status"}
+      aria-label={hidden ? undefined : "Loading the book"}
+      aria-hidden={hidden}
+    >
+      <div
+        className="book-placeholder"
+        style={{
+          height: "min(60vh, 80vw)",
+          aspectRatio: "800 / 1120",
+          transform: `perspective(1600px) translateY(-3.5vh) rotateY(-24deg) rotateX(6deg) scale(${far ? 0.5 : 1})`,
+          opacity: far ? 0.55 : 1,
+          transition: "transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.9s ease",
+        }}
+      >
+        <Cover />
+      </div>
     </div>
   );
 }
