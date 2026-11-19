@@ -6,6 +6,9 @@ import { PageShell } from "@/components/site/PageShell";
 import { AuthorCard } from "@/components/site/AuthorCard";
 import { getNeighbours, getPostBySlug, getPublishedPosts, getRelated, getSeries } from "@/lib/posts";
 import { renderPost } from "@/lib/content/render";
+import { getPickForPost } from "@/lib/picks";
+import { chartRange, tradingViewSymbol } from "@/lib/content/stock";
+import { TradingViewChart } from "@/components/site/TradingViewChart";
 import { PostGrid } from "@/components/site/PostGrid";
 import { ReadingProgress } from "@/components/site/ReadingProgress";
 import { GlossaryTips } from "@/components/site/GlossaryTips";
@@ -56,12 +59,18 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) notFound();
-  const [{ newer, older }, series, related] = await Promise.all([
+  const [{ newer, older }, series, related, pick] = await Promise.all([
     getNeighbours(slug),
     getSeries(post.series),
     getRelated(post),
+    getPickForPost(slug),
   ]);
   const { html, headings } = renderPost(post.content);
+  // A post with a company snapshot gets a live chart straight after the snapshot box.
+  const chartSymbol = pick ? tradingViewSymbol(pick.snapshot) : null;
+  const cardStart = html.indexOf('<aside class="stock-card"');
+  const cardEnd = cardStart === -1 ? -1 : html.indexOf("</aside>", cardStart) + "</aside>".length;
+  const [beforeChart, afterChart] = chartSymbol && cardEnd > 0 ? [html.slice(0, cardEnd), html.slice(cardEnd)] : [html, ""];
   const part = series.findIndex((p) => p.slug === post.slug) + 1;
 
   const jsonLd = {
@@ -142,7 +151,22 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
           </ol>
         </details>
       )}
-      <div className="prose-ff mt-10" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="prose-ff mt-10" dangerouslySetInnerHTML={{ __html: beforeChart }} />
+      {pick && chartSymbol && afterChart && (
+        <figure className="mt-6">
+          <TradingViewChart
+            compact
+            symbol={chartSymbol}
+            range={chartRange(post.date, pick.quote ? new Date(pick.quote.asOf).getTime() : new Date(post.date).getTime() + 365 * 86_400_000)}
+            label={pick.snapshot.company || pick.snapshot.ticker}
+          />
+          <figcaption className="mt-2 text-center text-xs text-muted">
+            Live chart of {pick.snapshot.company || pick.snapshot.ticker} since before this post.{" "}
+            <Link href="/track-record" className="font-medium text-accent-strong hover:underline">See every call on the track record</Link>
+          </figcaption>
+        </figure>
+      )}
+      {afterChart && <div className="prose-ff mt-6" dangerouslySetInnerHTML={{ __html: afterChart }} />}
       {series.length > 1 && (
         <nav id="series" aria-label={`The ${post.series} series`} className="mt-14 scroll-mt-24 rounded-2xl border border-line bg-surface p-5 shadow-soft">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-strong">Series</p>

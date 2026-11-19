@@ -30,6 +30,21 @@ function Change({ value }: { value: number | null }) {
   );
 }
 
+/** Points ahead of or behind the market, marked right or wrong for the verdict given. */
+function VsMarket({ pick }: { pick: Pick }) {
+  if (pick.vsMarket === null) return <span className="text-muted">—</span>;
+  const v = pick.vsMarket;
+  return (
+    <span className="whitespace-nowrap">
+      <span className={`font-semibold ${pick.ahead ? "text-accent-strong" : "text-[#d9634c]"}`}>
+        {v >= 0 ? "+" : "−"}
+        {Math.abs(v).toFixed(1)} pts
+      </span>
+      <span className="block text-xs text-muted">{pick.ahead ? "Right call" : "Wrong call"}</span>
+    </span>
+  );
+}
+
 const chartId = (p: Pick) => `chart-${p.post.slug}-${p.snapshot.ticker}`.toLowerCase().replace(/[^a-z0-9-]/g, "-");
 
 const average = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
@@ -38,7 +53,8 @@ export default async function TrackRecordPage() {
   const picks = await getPicks();
   const priced = picks.filter((p): p is Pick & { change: number } => p.change !== null);
   const buys = priced.filter((p) => p.snapshot.verdict === "buy");
-  const avoids = priced.filter((p) => p.snapshot.verdict === "avoid");
+  const judged = picks.filter((p) => p.ahead !== null);
+  const ahead = judged.filter((p) => p.ahead).length;
   const asOf = picks.map((p) => p.quote?.asOf).filter(Boolean).sort().at(-1);
 
   return (
@@ -60,7 +76,7 @@ export default async function TrackRecordPage() {
             {[
               { label: "Companies covered", value: String(picks.length) },
               { label: "Average move of Buy calls", value: buys.length ? <Change value={average(buys.map((p) => p.change))} /> : "—" },
-              { label: "Average move of Avoid calls (lower is better)", value: avoids.length ? <Change value={average(avoids.map((p) => p.change))} /> : "—" },
+              { label: "Calls ahead of the market", value: judged.length ? `${ahead} of ${judged.length}` : "—" },
             ].map((s) => (
               <div key={s.label} className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
                 <dt className="text-xs font-semibold uppercase tracking-wider text-muted">{s.label}</dt>
@@ -70,7 +86,7 @@ export default async function TrackRecordPage() {
           </dl>
 
           <div className="mt-8 overflow-x-auto rounded-2xl border border-line bg-surface shadow-soft">
-            <table className="w-full min-w-[640px] text-left text-sm">
+            <table className="w-full min-w-[860px] text-left text-sm">
               <caption className="sr-only">Every pick with its price then and now</caption>
               <thead className="bg-bg-soft text-xs uppercase tracking-wider text-muted">
                 <tr>
@@ -80,6 +96,8 @@ export default async function TrackRecordPage() {
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Price then</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Price now</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Since</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold">Market</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold">Vs market</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold"><span className="sr-only">Chart</span></th>
                 </tr>
               </thead>
@@ -109,6 +127,13 @@ export default async function TrackRecordPage() {
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       <Change value={p.change} />
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      <span className="block text-ink-soft">{p.benchmark.change === null ? "—" : `${p.benchmark.change >= 0 ? "+" : "−"}${Math.abs(p.benchmark.change).toFixed(1)}%`}</span>
+                      <span className="text-xs text-muted">{p.benchmark.name}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      <VsMarket pick={p} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       {tradingViewSymbol(p.snapshot) && (
@@ -148,6 +173,12 @@ export default async function TrackRecordPage() {
                           {VERDICTS[p.snapshot.verdict].label}
                         </span>
                         <p className="mt-1 text-sm"><Change value={p.change} /></p>
+                        {p.vsMarket !== null && (
+                          <p className="text-xs text-muted">
+                            {p.vsMarket >= 0 ? "+" : "−"}
+                            {Math.abs(p.vsMarket).toFixed(1)} pts vs {p.benchmark.name}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <p className="mt-2 text-sm text-ink-soft">
@@ -170,8 +201,9 @@ export default async function TrackRecordPage() {
 
           <p className="mt-8 text-xs leading-relaxed text-muted">
             Current prices come from Yahoo Finance and are refreshed every few hours{asOf ? `, last on ${formatDate(asOf)}` : ""}. Moves
-            are share price only and leave out dividends. For Avoid and Watch calls, a falling price means the caution was
-            right. {site.disclaimer} Past performance is no guide to the future.
+            are share price only and leave out dividends. Each call is compared with the S&P 500 (or the ASX 200 for
+            Australian shares) over the same period: a Buy or Hold call is right when the share beats the market, and a
+            Watch or Avoid call is right when it falls behind. {site.disclaimer} Past performance is no guide to the future.
           </p>
         </>
       )}

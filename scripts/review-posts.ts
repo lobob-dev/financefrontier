@@ -111,22 +111,6 @@ const edits: Record<string, Edit> = {
       metrics: [metric("Main asset", "Bitcoin"), metric("Premium to holdings", "Around 2x")],
     },
   },
-  "capital-curiosity": {
-    slug: "agora-api-the-micro-cap-nobodys-watching",
-    title: "Agora (API): The Micro-Cap Nobody’s Watching",
-    excerpt:
-      "Agora's share price has fallen about 95% and its accounts are full of one-off write-downs. Underneath, it holds more cash than its entire market value, has no debt, still produces free cash flow and is buying back its own shares.",
-    seo: "Agora (API) holds more cash than its market value. How impairments hide a cash-rich business, and the catalysts that could unlock it.",
-    tags: ["Small Caps", "Value", "Technology"],
-    cover: "/covers/posts/agora.webp",
-    coverAlt: "API in large letters over a price line that falls and starts to recover",
-    dropLeading: 1,
-    snapshot: {
-      company: "Agora, Inc.", ticker: "API", exchange: "NASDAQ", verdict: "buy", currency: "USD",
-      summary: "A cash-rich micro-cap hidden behind accounting noise. For patient investors.",
-      metrics: [metric("Market cap", "~US$167M"), metric("Cash", "US$286M"), metric("Debt", "US$0")],
-    },
-  },
   "meta-in-2030-from-ads-to-ai-infrastructure-powerhouse": {
     title: "Meta (META) in 2030: From Ads to AI Infrastructure Powerhouse",
     excerpt:
@@ -247,6 +231,7 @@ const edits: Record<string, Edit> = {
 const remove = [
   "journey-and-motivation",
   "how-to-build-a-strong-financial-foundation",
+  "capital-curiosity",
   "weekly-market-inspection-1-aspire-mining-ltd",
   "weekly-market-inspection-2-china-sxt-pharmaceuticals-inc",
   "weekly-market-inspection-3-pathward-financial-inc",
