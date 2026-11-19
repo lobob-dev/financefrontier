@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/components/site/PageShell";
 import { getPicks, type Pick } from "@/lib/picks";
-import { VERDICTS, formatMoney, type Verdict } from "@/lib/content/stock";
+import { VERDICTS, chartRange, formatMoney, tradingViewSymbol, type Verdict } from "@/lib/content/stock";
+import { TradingViewChart } from "@/components/site/TradingViewChart";
 import { formatDate } from "@/lib/format";
 import { site } from "@/lib/site";
 
@@ -28,6 +29,8 @@ function Change({ value }: { value: number | null }) {
     </span>
   );
 }
+
+const chartId = (p: Pick) => `chart-${p.post.slug}-${p.snapshot.ticker}`.toLowerCase().replace(/[^a-z0-9-]/g, "-");
 
 const average = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 
@@ -77,6 +80,7 @@ export default async function TrackRecordPage() {
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Price then</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Price now</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Since</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold"><span className="sr-only">Chart</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -106,12 +110,65 @@ export default async function TrackRecordPage() {
                     <td className="px-4 py-3 text-right tabular-nums">
                       <Change value={p.change} />
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      {tradingViewSymbol(p.snapshot) && (
+                        <a href={`#${chartId(p)}`} className="whitespace-nowrap text-xs font-semibold text-accent-strong hover:underline">
+                          Chart <span aria-hidden="true">↓</span>
+                        </a>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted">
+          <section aria-labelledby="charts" className="mt-16">
+            <h2 id="charts" className="font-serif text-3xl font-semibold tracking-tight">Live charts</h2>
+            <p className="mt-2 text-ink-soft">
+              Each chart reaches back past the date of the call, so you can see the move since. Drag or scroll inside a chart to explore. Charts by TradingView; US prices can be up to 15 minutes delayed.
+            </p>
+            <div className="mt-8 grid gap-6 lg:grid-cols-2">
+              {picks.map((p) => {
+                const symbol = tradingViewSymbol(p.snapshot);
+                if (!symbol) return null;
+                const name = p.snapshot.company || p.snapshot.ticker;
+                return (
+                  <article
+                    key={chartId(p)}
+                    id={chartId(p)}
+                    className="scroll-mt-24 rounded-2xl border border-line bg-surface p-4 shadow-soft sm:p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-serif text-xl font-semibold text-ink">{name}</h3>
+                        <p className="text-xs text-muted">{symbol}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${verdictStyle[p.snapshot.verdict]}`}>
+                          {VERDICTS[p.snapshot.verdict].label}
+                        </span>
+                        <p className="mt-1 text-sm"><Change value={p.change} /></p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-sm text-ink-soft">
+                      Called on {formatDate(p.post.date)} at {formatMoney(p.priceThen, p.snapshot.currency)}
+                      {p.quote ? `, now ${formatMoney(p.quote.price, p.quote.currency)}` : ""}.{" "}
+                      <Link href={`/blog/${p.post.slug}`} className="font-medium text-accent-strong hover:underline">Read the post</Link>
+                    </p>
+                    <div className="mt-4">
+                      <TradingViewChart
+                        symbol={symbol}
+                        range={chartRange(p.post.date, p.quote ? new Date(p.quote.asOf).getTime() : new Date(p.post.date).getTime() + 365 * 86_400_000)}
+                        label={name}
+                      />
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+          <p className="mt-8 text-xs leading-relaxed text-muted">
             Current prices come from Yahoo Finance and are refreshed every few hours{asOf ? `, last on ${formatDate(asOf)}` : ""}. Moves
             are share price only and leave out dividends. For Avoid and Watch calls, a falling price means the caution was
             right. {site.disclaimer} Past performance is no guide to the future.

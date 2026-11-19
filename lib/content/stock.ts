@@ -99,3 +99,19 @@ export function formatMoney(value: number | null, currency: string) {
 export function hasSnapshotContent(s: StockSnapshot) {
   return !!(s.company || s.ticker);
 }
+
+/** The symbol TradingView uses, e.g. NASDAQ:MSFT, NYSE:BRK.B or ASX:CBA. */
+export function tradingViewSymbol(s: Pick<StockSnapshot, "ticker" | "exchange">) {
+  const t = s.ticker.trim().toUpperCase();
+  if (!/^[A-Z0-9.\-]{1,12}$/.test(t)) return null;
+  return s.exchange === "Other" ? t : `${s.exchange}:${t}`;
+}
+
+/** A chart range that reaches back past the date of the call. */
+export function chartRange(sinceIso: string, now = Date.now()) {
+  const days = (now - new Date(sinceIso).getTime()) / 86_400_000;
+  if (days <= 85) return "3M";
+  if (days <= 175) return "6M";
+  if (days <= 360) return "12M";
+  return "60M";
+}
