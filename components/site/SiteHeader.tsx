@@ -67,7 +67,6 @@ export function SiteFooter() {
           <a href={site.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-accent-strong">
             LinkedIn
           </a>
-          <a href="/rss.xml" className="hover:text-accent-strong">RSS</a>
         </nav>
         <p>{site.disclaimer}</p>
       </div>

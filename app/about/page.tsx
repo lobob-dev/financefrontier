@@ -23,8 +23,7 @@ export default function AboutPage() {
           <p>{site.about}</p>
           <p>
             New posts appear first in the book on the home page, and every post is listed on the{" "}
-            <Link href="/blog">all posts</Link> page, where you can search and browse by tag. You can also follow
-            along with the <a href="/rss.xml">RSS feed</a>.
+            <Link href="/blog">all posts</Link> page, where you can search and browse by tag.
           </p>
           <p>
             I wrote every post here, and I designed and built the site myself, including the book you open on the

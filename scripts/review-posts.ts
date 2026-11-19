@@ -21,8 +21,6 @@ const url = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
 const key = process.env.SUPABASE_SECRET_KEY ?? "";
 if (!key) throw new Error("Set SUPABASE_SECRET_KEY (the local one is printed by: npx supabase status).");
 
-const NATESH = "Natesh Nagarajah";
-const WMI = "Weekly Market Inspection";
 
 type Snap = Omit<StockSnapshot, "price"> & { price?: string };
 type Edit = {
@@ -243,57 +241,19 @@ const edits: Record<string, Edit> = {
     firstImageAsCover: true,
     dropImages: ["/imported/assets-vs-liabilities/2.webp"],
   },
-  // Natesh's posts keep his name, his verdicts and his words; only titles, typos and spelling change.
-  "weekly-market-inspection-1-aspire-mining-ltd": {
-    title: "Weekly Market Inspection #1: Aspire Mining (AKM)",
-    excerpt:
-      "A look at Aspire Mining, the ASX-listed coal explorer developing projects in Mongolia: what it does, why its share price moved in April 2025, and what the numbers say about its valuation.",
-    seo: "Aspire Mining (ASX: AKM) in April 2025: its Mongolian coal projects, cash burn and valuation.",
-    author: NATESH,
-    series: WMI,
-  },
-  "weekly-market-inspection-2-china-sxt-pharmaceuticals-inc": {
-    title: "Weekly Market Inspection #2: China SXT Pharmaceuticals (SXTC)",
-    excerpt:
-      "China SXT Pharmaceuticals makes traditional Chinese medicines and has seen big swings in its share price. Its background, its current state and what is driving the valuation.",
-    seo: "China SXT Pharmaceuticals (SXTC): background, recent share price moves and a look at its valuation.",
-    author: NATESH,
-    series: WMI,
-  },
-  "weekly-market-inspection-3-pathward-financial-inc": {
-    title: "Weekly Market Inspection #3: Pathward Financial (CASH)",
-    excerpt:
-      "Pathward Financial is a US banking holding company with consumer, commercial and corporate arms. Its financials, its recent share price and whether the market is overvaluing it.",
-    seo: "Pathward Financial (CASH): its business, financial overview, recent share price and valuation analysis.",
-    author: NATESH,
-    series: WMI,
-  },
-  "next-technology-holding-inc-quality-or-not": {
-    title: "Next Technology Holding (NXTT): Quality or Not?",
-    excerpt:
-      "Next Technology Holding has ridden the AI software wave, but its valuations raise questions. A look at its financials, its profitability and whether it is a quality investment at all.",
-    seo: "Next Technology Holding (NXTT): financial overview, questionable valuations and whether it is a quality investment.",
-    author: NATESH,
-  },
-  "asx-small-cap-gems-uos": {
-    title: "ASX Small Cap Gems: United Overseas Australia (UOS)",
-    excerpt:
-      "While many ASX large caps have had a volatile year, some small caps are quietly doing well. United Overseas Australia is one of them: its financials, its valuation and why it may be a diamond in the rough.",
-    seo: "United Overseas Australia (ASX: UOS): a small-cap property developer's financials and valuation.",
-    tags: ["Small Caps", "Equity Research", "Stock Market"],
-    author: NATESH,
-  },
-  "careers-in-finance-which-path-should-you-pick": {
-    title: "Careers in Finance: Which Path Should You Pick?",
-    excerpt:
-      "Financial analyst, investment banker, financial adviser or trader: what each job involves, what it pays in Melbourne, and which might suit you.",
-    seo: "Four careers in finance compared: what analysts, investment bankers, advisers and traders do and earn in Melbourne.",
-    author: NATESH,
-  },
 };
 
-/** Posts that are too thin to stand on their own. */
-const remove = ["journey-and-motivation", "how-to-build-a-strong-financial-foundation"];
+/** Posts that are too thin to stand on their own, and guest posts the site no longer carries. */
+const remove = [
+  "journey-and-motivation",
+  "how-to-build-a-strong-financial-foundation",
+  "weekly-market-inspection-1-aspire-mining-ltd",
+  "weekly-market-inspection-2-china-sxt-pharmaceuticals-inc",
+  "weekly-market-inspection-3-pathward-financial-inc",
+  "next-technology-holding-inc-quality-or-not",
+  "asx-small-cap-gems-uos",
+  "careers-in-finance-which-path-should-you-pick",
+];
 
 // ---------------------------------------------------------------------------
 // Text fixes applied everywhere
