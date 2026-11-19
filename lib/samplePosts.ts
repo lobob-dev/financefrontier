@@ -28,6 +28,8 @@ const posts: Post[] = [
       d.p("From several thousand listed companies this usually leaves a few dozen. Those are the ones that earn a slow read of the annual report, and that is where the real work begins."),
     ),
     seoDescription: "",
+    series: null,
+    author: null,
     updatedAt: "2026-11-16T00:00:00.000Z",
   },
   {
@@ -52,6 +54,8 @@ const posts: Post[] = [
       d.p("Finally, read the financing section to see where that free cash goes. The pattern over several years tells you more about management than any letter to shareholders."),
     ),
     seoDescription: "",
+    series: null,
+    author: null,
     updatedAt: "2026-11-16T00:00:00.000Z",
   },
   {
@@ -73,6 +77,8 @@ const posts: Post[] = [
       d.p("How wide the margin should be depends on how predictable the business is. A steady consumer brand might deserve a smaller discount than a cyclical manufacturer whose profits swing with the economy."),
     ),
     seoDescription: "",
+    series: null,
+    author: null,
     updatedAt: "2026-11-16T00:00:00.000Z",
   },
 ];

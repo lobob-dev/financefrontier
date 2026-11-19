@@ -8,6 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${siteUrl}/`, lastModified: latest, changeFrequency: "weekly", priority: 1 },
     { url: `${siteUrl}/blog`, lastModified: latest, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${siteUrl}/track-record`, changeFrequency: "daily", priority: 0.7 },
     { url: `${siteUrl}/about`, changeFrequency: "yearly", priority: 0.4 },
     { url: `${siteUrl}/contact`, changeFrequency: "yearly", priority: 0.3 },
     ...posts.map((p) => ({

@@ -2,6 +2,8 @@ import sanitizeHtml from "sanitize-html";
 import { common, createLowlight } from "lowlight";
 import { toHtml } from "hast-util-to-html";
 import type { DocNode, Mark } from "./doc";
+import { glossaryMatcher, lookupTerm } from "./glossary";
+import { VERDICTS, formatMoney, hasSnapshotContent, parsePrice, readSnapshot } from "./stock";
 
 const lowlight = createLowlight(common);
 
@@ -49,9 +51,42 @@ function plain(node: DocNode): string {
   return (node.content ?? []).map(plain).join("");
 }
 
-function renderText(node: DocNode) {
-  let html = escapeHtml(node.text ?? "");
+/** Everything the renderer keeps track of while it walks one post. */
+type Ctx = {
+  ids: Map<string, number>;
+  headings: Heading[];
+  /** glossary terms already explained in this post */
+  terms: Set<string>;
+  /** false inside headings, so titles stay plain */
+  explain: boolean;
+};
+
+export type Heading = { id: string; text: string; level: 2 | 3 };
+
+const MAX_TERMS_PER_POST = 14;
+
+/** Wraps the first use of each glossary term in a small explainer. */
+function withTerms(text: string, ctx: Ctx) {
+  if (!ctx.explain || ctx.terms.size >= MAX_TERMS_PER_POST) return escapeHtml(text);
+  const { regex } = glossaryMatcher();
+  regex.lastIndex = 0;
+  let out = "";
+  let last = 0;
+  for (const m of text.matchAll(regex)) {
+    const term = lookupTerm(m[0]);
+    if (!term || ctx.terms.has(term.id) || ctx.terms.size >= MAX_TERMS_PER_POST) continue;
+    ctx.terms.add(term.id);
+    out += escapeHtml(text.slice(last, m.index));
+    out += `<span class="term" tabindex="0">${escapeHtml(m[0])}<span class="term-tip" role="tooltip">${escapeHtml(term.definition)}</span></span>`;
+    last = m.index! + m[0].length;
+  }
+  return out + escapeHtml(text.slice(last));
+}
+
+function renderText(node: DocNode, ctx: Ctx) {
   const marks: Mark[] = node.marks ?? [];
+  const plainText = !marks.some((m) => m.type === "link" || m.type === "code");
+  let html = plainText ? withTerms(node.text ?? "", ctx) : escapeHtml(node.text ?? "");
   // the code mark goes innermost and the link outermost
   const order = ["code", "bold", "italic", "underline", "strike", "link"];
   for (const mark of [...marks].sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type))) {
@@ -93,13 +128,33 @@ function highlight(code: string, language: string) {
   }
 }
 
-function renderNode(node: DocNode, used: Map<string, number>): string {
-  const inner = () => (node.content ?? []).map((child) => renderNode(child, used)).join("");
+function renderSnapshot(node: DocNode) {
+  const s = readSnapshot(node.attrs);
+  if (!hasSnapshotContent(s)) return "";
+  const verdict = VERDICTS[s.verdict];
+  const price = parsePrice(s.price);
+  const rows = [
+    ...(price !== null ? [{ label: "Price when written", value: formatMoney(price, s.currency) }] : []),
+    ...s.metrics.filter((m) => m.label && m.value),
+  ];
+  const listing = [s.exchange !== "Other" ? s.exchange : "", s.ticker].filter(Boolean).join(": ");
+  return `<aside class="stock-card" aria-label="Company snapshot">
+<div class="stock-card-head"><div><p class="stock-card-kicker">Company snapshot</p><p class="stock-card-name">${escapeHtml(s.company || s.ticker)}</p>${listing ? `<p class="stock-card-ticker">${escapeHtml(listing)}</p>` : ""}</div><p class="stock-verdict stock-verdict-${s.verdict}"><span class="stock-verdict-label">${verdict.label}</span><span class="stock-verdict-note">${escapeHtml(verdict.note)}</span></p></div>
+${rows.length ? `<dl class="stock-card-metrics">${rows.map((r) => `<div><dt>${escapeHtml(r.label)}</dt><dd>${escapeHtml(r.value)}</dd></div>`).join("")}</dl>` : ""}
+${s.summary ? `<p class="stock-card-summary">${escapeHtml(s.summary)}</p>` : ""}
+</aside>`;
+}
+
+function renderNode(node: DocNode, ctx: Ctx): string {
+  const used = ctx.ids;
+  const inner = () => (node.content ?? []).map((child) => renderNode(child, ctx)).join("");
   switch (node.type) {
     case "doc":
       return inner();
     case "text":
-      return renderText(node);
+      return renderText(node, ctx);
+    case "stockSnapshot":
+      return renderSnapshot(node);
     case "paragraph":
       return `<p>${inner()}</p>`;
     case "heading": {
@@ -108,7 +163,12 @@ function renderNode(node: DocNode, used: Map<string, number>): string {
       const seen = used.get(id) ?? 0;
       used.set(id, seen + 1);
       if (seen) id = `${id}-${seen + 1}`;
-      return `<h${level} id="${id}">${inner()}</h${level}>`;
+      if (level <= 3) ctx.headings.push({ id, text: plain(node).trim(), level: level as 2 | 3 });
+      const explain = ctx.explain;
+      ctx.explain = false;
+      const body = inner();
+      ctx.explain = explain;
+      return `<h${level} id="${id}">${body}</h${level}>`;
     }
     case "bulletList":
       return `<ul>${inner()}</ul>`;
@@ -144,7 +204,7 @@ function renderNode(node: DocNode, used: Map<string, number>): string {
       const kids = node.content ?? [];
       const body =
         kids.length === 1 && kids[0].type === "paragraph"
-          ? (kids[0].content ?? []).map((c) => renderNode(c, used)).join("")
+          ? (kids[0].content ?? []).map((c) => renderNode(c, ctx)).join("")
           : inner();
       return `<${tag}${span("colspan")}${span("rowspan")}>${body}</${tag}>`;
     }
@@ -167,7 +227,7 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedTags: [
     "p", "h2", "h3", "h4", "strong", "em", "u", "s", "code", "pre", "a", "ul", "ol", "li",
     "blockquote", "br", "hr", "figure", "figcaption", "img", "span",
-    "div", "table", "tbody", "tr", "th", "td",
+    "div", "table", "tbody", "tr", "th", "td", "aside", "dl", "dt", "dd",
   ],
   allowedAttributes: {
     a: ["href", "rel", "target"],
@@ -177,15 +237,21 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
     h3: ["id"],
     h4: ["id"],
     code: ["class"],
-    span: ["class"],
+    span: ["class", "tabindex", "role"],
     div: ["class"],
+    p: ["class"],
+    aside: ["class", "aria-label"],
+    dl: ["class"],
     th: ["colspan", "rowspan"],
     td: ["colspan", "rowspan"],
   },
   allowedClasses: {
-    div: ["table-wrap"],
+    div: ["table-wrap", "stock-*"],
+    p: ["stock-*"],
+    aside: ["stock-card"],
+    dl: ["stock-card-metrics"],
     code: ["hljs", "language-*"],
-    span: ["hljs-*"],
+    span: ["hljs-*", "term", "term-tip", "stock-*"],
   },
   allowedSchemes: ["http", "https", "mailto"],
   allowedSchemesByTag: { img: ["http", "https"] },
@@ -193,8 +259,15 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
   disallowedTagsMode: "discard",
 };
 
+/** Turns a stored post document into safe HTML, and lists its headings for the table of contents. */
+export function renderPost(doc: DocNode | null | undefined, options: { explainTerms?: boolean } = {}) {
+  const ctx: Ctx = { ids: new Map(), headings: [], terms: new Set(), explain: options.explainTerms ?? true };
+  if (!doc || doc.type !== "doc") return { html: "", headings: [] as Heading[] };
+  const html = sanitizeHtml(renderNode(doc, ctx), sanitizeOptions);
+  return { html, headings: ctx.headings };
+}
+
 /** Turns a stored post document into safe HTML. */
-export function renderDoc(doc: DocNode | null | undefined): string {
-  if (!doc || doc.type !== "doc") return "";
-  return sanitizeHtml(renderNode(doc, new Map()), sanitizeOptions);
+export function renderDoc(doc: DocNode | null | undefined, options: { explainTerms?: boolean } = {}): string {
+  return renderPost(doc, options).html;
 }

@@ -21,7 +21,7 @@ export async function GET() {
       <pubDate>${new Date(p.date).toUTCString()}</pubDate>
       <description>${esc(p.excerpt)}</description>
 ${p.tags.map((t) => `      <category>${esc(t)}</category>`).join("\n")}
-      <content:encoded>${cdata(absolutise(renderDoc(p.content)))}</content:encoded>
+      <content:encoded>${cdata(absolutise(renderDoc(p.content, { explainTerms: false })))}</content:encoded>
     </item>`;
     })
     .join("\n");

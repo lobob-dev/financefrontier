@@ -4,8 +4,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/site/PageShell";
 import { AuthorCard } from "@/components/site/AuthorCard";
-import { getNeighbours, getPostBySlug, getPublishedPosts } from "@/lib/posts";
-import { renderDoc } from "@/lib/content/render";
+import { getNeighbours, getPostBySlug, getPublishedPosts, getRelated, getSeries } from "@/lib/posts";
+import { renderPost } from "@/lib/content/render";
+import { PostGrid } from "@/components/site/PostGrid";
+import { ReadingProgress } from "@/components/site/ReadingProgress";
+import { GlossaryTips } from "@/components/site/GlossaryTips";
 import { formatDate, tagSlug } from "@/lib/format";
 import { site } from "@/lib/site";
 import { siteUrl } from "@/lib/env";
@@ -32,7 +35,7 @@ export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): P
       publishedTime: post.date,
       modifiedTime: post.updatedAt,
       tags: post.tags,
-      authors: [site.author],
+      authors: [post.author ?? site.author],
     },
     twitter: { card: "summary_large_image", title: post.title, description },
   };
@@ -53,8 +56,13 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) notFound();
-  const { newer, older } = await getNeighbours(slug);
-  const html = renderDoc(post.content);
+  const [{ newer, older }, series, related] = await Promise.all([
+    getNeighbours(slug),
+    getSeries(post.series),
+    getRelated(post),
+  ]);
+  const { html, headings } = renderPost(post.content);
+  const part = series.findIndex((p) => p.slug === post.slug) + 1;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -67,11 +75,13 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
     url: `${siteUrl}/blog/${post.slug}`,
     image: new URL(post.coverImage, siteUrl).toString(),
     publisher: { "@type": "Organization", name: site.name },
-    author: { "@type": "Person", name: site.author, url: site.linkedin },
+    author: post.author ? { "@type": "Person", name: post.author } : { "@type": "Person", name: site.author, url: site.linkedin },
   };
 
   return (
-    <article className="rise-in">
+    <article id="article" className="rise-in">
+      <ReadingProgress target="#article" />
+      <GlossaryTips />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
@@ -80,7 +90,7 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
         <span aria-hidden="true">←</span> Back to the book
       </Link>
       <p className="mt-8 text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
-        By {site.author} · <time dateTime={post.date}>{formatDate(post.date)}</time> · {post.readingMinutes} min read
+        {post.author ? `Guest post by ${post.author}` : `By ${site.author}`} · <time dateTime={post.date}>{formatDate(post.date)}</time> · {post.readingMinutes} min read
       </p>
       <h1 className="mt-3 font-serif text-4xl font-semibold leading-[1.12] tracking-tight sm:text-[3.25rem]">
         {post.title}
@@ -110,10 +120,59 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
           className="aspect-[16/9] w-full rounded-2xl bg-bg-soft object-cover shadow-soft"
         />
       </figure>
+      {series.length > 1 && (
+        <p className="mt-8 rounded-xl bg-accent-soft/60 px-4 py-3 text-sm text-ink">
+          Part {part} of {series.length} in <strong>{post.series}</strong>.{" "}
+          <a href="#series" className="font-semibold text-accent-strong hover:underline">See every part</a>
+        </p>
+      )}
+      {headings.length >= 3 && (
+        <details open className="group mt-8 rounded-2xl border border-line bg-surface/70 px-5 py-4">
+          <summary className="cursor-pointer select-none text-sm font-semibold uppercase tracking-[0.14em] text-accent-strong marker:text-accent">
+            In this post
+          </summary>
+          <ol className="mt-3 space-y-1.5 text-[0.95rem]">
+            {headings.map((h) => (
+              <li key={h.id} className={h.level === 3 ? "pl-5" : ""}>
+                <a href={`#${h.id}`} className="text-ink-soft hover:text-accent-strong">
+                  {h.text}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
       <div className="prose-ff mt-10" dangerouslySetInnerHTML={{ __html: html }} />
+      {series.length > 1 && (
+        <nav id="series" aria-label={`The ${post.series} series`} className="mt-14 scroll-mt-24 rounded-2xl border border-line bg-surface p-5 shadow-soft">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-strong">Series</p>
+          <p className="mt-1 font-serif text-xl font-semibold text-ink">{post.series}</p>
+          <ol className="mt-3 space-y-2">
+            {series.map((p, i) => (
+              <li key={p.slug} className="flex gap-3 text-[0.95rem]">
+                <span className="w-14 shrink-0 text-muted">Part {i + 1}</span>
+                {p.slug === post.slug ? (
+                  <span className="font-semibold text-ink" aria-current="page">{p.title} (this post)</span>
+                ) : (
+                  <Link href={`/blog/${p.slug}`} className="text-ink-soft hover:text-accent-strong">{p.title}</Link>
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )}
 
-      <AuthorCard />
+      <AuthorCard guest={post.author} />
       <p className="mt-8 text-sm text-muted">{site.disclaimer}</p>
+
+      {related.length > 0 && (
+        <section aria-labelledby="related" className="mt-14">
+          <h2 id="related" className="font-serif text-2xl font-semibold text-ink">You might also like</h2>
+          <div className="mt-6">
+            <PostGrid posts={related} headingLevel={3} />
+          </div>
+        </section>
+      )}
 
       {(newer || older) && (
         <nav aria-label="More posts" className="mt-10 grid gap-4 sm:grid-cols-2">

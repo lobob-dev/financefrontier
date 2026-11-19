@@ -2,7 +2,16 @@ import Link from "next/link";
 import type { PostSummary } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 
-export function PostGrid({ posts, headingLevel = 2 }: { posts: PostSummary[]; headingLevel?: 2 | 3 }) {
+export function PostGrid({
+  posts,
+  headingLevel = 2,
+  snippets,
+}: {
+  posts: PostSummary[];
+  headingLevel?: 2 | 3;
+  /** Matching text from inside each post, shown under the title when searching. */
+  snippets?: Map<string, string>;
+}) {
   const H = headingLevel === 2 ? "h2" : "h3";
   return (
     <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -29,7 +38,13 @@ export function PostGrid({ posts, headingLevel = 2 }: { posts: PostSummary[]; he
               <H className="mt-2 font-serif text-xl font-semibold leading-snug text-ink group-hover:text-accent-strong">
                 {post.title}
               </H>
-              <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-soft">{post.excerpt}</p>
+              {snippets?.get(post.slug) ? (
+                <p className="mt-2 line-clamp-3 rounded-lg bg-accent-soft/60 px-2.5 py-1.5 text-sm leading-relaxed text-ink-soft">
+                  {snippets.get(post.slug)}
+                </p>
+              ) : (
+                <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-soft">{post.excerpt}</p>
+              )}
               {post.tags.length > 0 && (
                 <p className="mt-auto pt-4 text-xs font-medium text-muted">{post.tags.join(" · ")}</p>
               )}

@@ -29,7 +29,15 @@ function toLocalInput(iso: string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTags: string[] }) {
+export function PostEditor({
+  initial,
+  knownTags,
+  knownSeries,
+}: {
+  initial: AdminPost;
+  knownTags: string[];
+  knownSeries: string[];
+}) {
   const [post, setPost] = useState(initial);
   const [title, setTitle] = useState(initial.title);
   const [slug, setSlug] = useState(initial.slug.startsWith("untitled-") ? "" : initial.slug);
@@ -44,6 +52,8 @@ export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTa
   const [coverAlt, setCoverAlt] = useState(initial.coverImageAlt);
   const [tags, setTags] = useState(initial.tags);
   const [seo, setSeo] = useState(initial.seoDescription);
+  const [series, setSeries] = useState(initial.series ?? "");
+  const [author, setAuthor] = useState(initial.author ?? "");
   const [scheduleAt, setScheduleAt] = useState("");
   const [save, setSave] = useState<SaveState>({ kind: "saved", at: new Date(initial.updatedAt) });
   const [notice, setNotice] = useState<string | null>(null);
@@ -63,8 +73,10 @@ export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTa
       coverImageAlt: coverAlt,
       tags,
       seoDescription: seo,
+      series,
+      author,
     }),
-    [title, effectiveSlug, post.slug, excerpt, content, coverUrl, coverAlt, tags, seo],
+    [title, effectiveSlug, post.slug, excerpt, content, coverUrl, coverAlt, tags, seo, series, author],
   );
 
   // The last version the server confirmed. Any other version of `input` is unsaved.
@@ -395,6 +407,36 @@ export function PostEditor({ initial, knownTags }: { initial: AdminPost; knownTa
               </div>
             </div>
             <TagInput value={tags} onChange={setTags} suggestions={knownTags} />
+            <div>
+              <label htmlFor="series" className="label">Series (optional)</label>
+              <input
+                id="series"
+                list="series-list"
+                className="field"
+                maxLength={80}
+                value={series}
+                onChange={(e) => setSeries(e.target.value)}
+                placeholder="Weekly Market Inspection"
+              />
+              <datalist id="series-list">
+                {knownSeries.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+              <p className="hint">Posts with the same series name are linked together as Part 1, Part 2 and so on.</p>
+            </div>
+            <div>
+              <label htmlFor="author" className="label">Guest author (optional)</label>
+              <input
+                id="author"
+                className="field"
+                maxLength={80}
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+                placeholder="Leave empty if you wrote it"
+              />
+              <p className="hint">Only for posts written by someone else. Their name replaces yours on the post.</p>
+            </div>
           </section>
 
           <section className="rounded-2xl border border-line bg-surface p-5 shadow-soft">

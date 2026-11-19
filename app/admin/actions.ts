@@ -19,6 +19,8 @@ export type PostInput = {
   coverImageAlt: string;
   tags: string[];
   seoDescription: string;
+  series: string;
+  author: string;
 };
 
 export type SaveResult = { ok: true; post: AdminPost } | { ok: false; error: string };
@@ -54,6 +56,8 @@ function clean(input: PostInput): { ok: true; row: Record<string, unknown> } | {
       cover_image_alt: String(input.coverImageAlt ?? "").trim().slice(0, 300),
       tags,
       seo_description: String(input.seoDescription ?? "").trim().slice(0, 300),
+      series: String(input.series ?? "").trim().replace(/\s+/g, " ").slice(0, 80) || null,
+      author: String(input.author ?? "").trim().replace(/\s+/g, " ").slice(0, 80) || null,
       reading_minutes: Math.min(600, readingMinutes(input.content)),
     },
   };

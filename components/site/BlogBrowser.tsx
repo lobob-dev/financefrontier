@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { PostSummary } from "@/lib/types";
 import { PostGrid } from "./PostGrid";
@@ -23,15 +23,45 @@ export function BlogBrowser({ posts, tags }: { posts: PostSummary[]; tags: { tag
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
+  // Results from the full-text search, which also looks inside the posts.
+  const [found, setFound] = useState<{ query: string; hits: Map<string, string> } | null>(null);
+  const trimmed = query.trim();
+
+  useEffect(() => {
+    if (trimmed.length < 2) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal });
+        const data = (await res.json()) as { hits: { slug: string; snippet: string }[] };
+        setFound({ query: trimmed, hits: new Map(data.hits.map((h) => [h.slug, h.snippet])) });
+      } catch {
+        // offline or cancelled: the quick search below still works
+      }
+    }, 180);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [trimmed]);
+
+  const full = found && found.query === trimmed && trimmed.length >= 2 ? found.hits : null;
+
   const shown = useMemo(() => {
     const words = norm(query).split(/\s+/).filter(Boolean);
-    return posts.filter((p) => {
+    const list = posts.filter((p) => {
       if (tag && !p.tags.includes(tag)) return false;
       if (!words.length) return true;
+      if (full) return full.has(p.slug);
       const hay = norm(`${p.title} ${p.excerpt} ${p.tags.join(" ")}`);
       return words.every((w) => hay.includes(w));
     });
-  }, [posts, query, tag]);
+    if (full) {
+      const order = [...full.keys()];
+      list.sort((a, b) => order.indexOf(a.slug) - order.indexOf(b.slug));
+    }
+    return list;
+  }, [posts, query, tag, full]);
 
   return (
     <div>
@@ -50,7 +80,7 @@ export function BlogBrowser({ posts, tags }: { posts: PostSummary[]; tags: { tag
               setQuery(e.target.value);
               sync(e.target.value, tag);
             }}
-            placeholder="Search posts"
+            placeholder="Search every post, e.g. buyback or ASX"
             className="field rounded-full pl-10"
           />
         </div>
@@ -83,7 +113,7 @@ export function BlogBrowser({ posts, tags }: { posts: PostSummary[]; tags: { tag
       </p>
       <div className="mt-10">
         {shown.length ? (
-          <PostGrid posts={shown} />
+          <PostGrid posts={shown} snippets={full ?? undefined} />
         ) : (
           <p className="rounded-2xl border border-dashed border-line p-10 text-center text-ink-soft">
             No posts match that search.

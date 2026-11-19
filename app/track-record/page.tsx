@@ -1,0 +1,123 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { PageShell } from "@/components/site/PageShell";
+import { getPicks, type Pick } from "@/lib/picks";
+import { VERDICTS, formatMoney, type Verdict } from "@/lib/content/stock";
+import { formatDate } from "@/lib/format";
+import { site } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Track record",
+  description: `Every company ${site.author} has written about on ${site.name}, and how its share price has moved since.`,
+  alternates: { canonical: "/track-record" },
+};
+
+const verdictStyle: Record<Verdict, string> = {
+  buy: "bg-[#12a77c] text-white",
+  hold: "bg-[#2f86c5] text-white",
+  watch: "bg-[#e9b949] text-[#2b2205]",
+  avoid: "bg-[#d9634c] text-white",
+};
+
+function Change({ value }: { value: number | null }) {
+  if (value === null) return <span className="text-muted">—</span>;
+  const up = value >= 0;
+  return (
+    <span className={`whitespace-nowrap font-semibold ${up ? "text-accent-strong" : "text-[#d9634c]"}`}>
+      {up ? "▲" : "▼"} {Math.abs(value).toFixed(1)}%
+    </span>
+  );
+}
+
+const average = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+export default async function TrackRecordPage() {
+  const picks = await getPicks();
+  const priced = picks.filter((p): p is Pick & { change: number } => p.change !== null);
+  const buys = priced.filter((p) => p.snapshot.verdict === "buy");
+  const avoids = priced.filter((p) => p.snapshot.verdict === "avoid");
+  const asOf = picks.map((p) => p.quote?.asOf).filter(Boolean).sort().at(-1);
+
+  return (
+    <PageShell width="max-w-5xl">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">Accountability</p>
+      <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight sm:text-5xl">Track record</h1>
+      <p className="mt-4 max-w-2xl text-ink-soft">
+        Every company I have given a verdict on, the share price when I wrote about it, and where it is now. The good
+        calls and the bad ones stay up.
+      </p>
+
+      {picks.length === 0 ? (
+        <p className="mt-10 rounded-2xl border border-dashed border-line p-10 text-center text-ink-soft">
+          No picks yet. They appear here as soon as a post with a company snapshot is published.
+        </p>
+      ) : (
+        <>
+          <dl className="mt-10 grid gap-4 sm:grid-cols-3">
+            {[
+              { label: "Companies covered", value: String(picks.length) },
+              { label: "Average move of Buy calls", value: buys.length ? <Change value={average(buys.map((p) => p.change))} /> : "—" },
+              { label: "Average move of Avoid calls (lower is better)", value: avoids.length ? <Change value={average(avoids.map((p) => p.change))} /> : "—" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+                <dt className="text-xs font-semibold uppercase tracking-wider text-muted">{s.label}</dt>
+                <dd className="mt-1 text-2xl font-semibold text-ink">{s.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className="mt-8 overflow-x-auto rounded-2xl border border-line bg-surface shadow-soft">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <caption className="sr-only">Every pick with its price then and now</caption>
+              <thead className="bg-bg-soft text-xs uppercase tracking-wider text-muted">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-semibold">Company</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Verdict</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Written</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold">Price then</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold">Price now</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold">Since</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {picks.map((p) => (
+                  <tr key={`${p.post.slug}-${p.snapshot.ticker}`}>
+                    <td className="px-4 py-3">
+                      <span className="block font-semibold text-ink">{p.snapshot.company || p.snapshot.ticker}</span>
+                      <span className="text-xs text-muted">
+                        {[p.snapshot.exchange !== "Other" ? p.snapshot.exchange : "", p.snapshot.ticker].filter(Boolean).join(": ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${verdictStyle[p.snapshot.verdict]}`}>
+                        {VERDICTS[p.snapshot.verdict].label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href={`/blog/${p.post.slug}`} className="line-clamp-2 font-medium text-ink-soft hover:text-accent-strong">
+                        {p.post.title}
+                      </Link>
+                      <span className="text-xs text-muted">{formatDate(p.post.date)}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">{formatMoney(p.priceThen, p.snapshot.currency)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {p.quote ? formatMoney(p.quote.price, p.quote.currency) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      <Change value={p.change} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-4 text-xs leading-relaxed text-muted">
+            Current prices come from Yahoo Finance and are refreshed every few hours{asOf ? `, last on ${formatDate(asOf)}` : ""}. Moves
+            are share price only and leave out dividends. For Avoid and Watch calls, a falling price means the caution was
+            right. {site.disclaimer} Past performance is no guide to the future.
+          </p>
+        </>
+      )}
+    </PageShell>
+  );
+}

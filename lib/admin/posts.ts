@@ -19,6 +19,8 @@ export type PostRow = {
   reading_minutes: number;
   created_at: string;
   updated_at: string;
+  series: string | null;
+  author: string | null;
 };
 
 export function rowToAdminPost(row: PostRow): AdminPost {
@@ -32,6 +34,8 @@ export function rowToAdminPost(row: PostRow): AdminPost {
     coverImageAlt: row.cover_image_alt,
     tags: row.tags ?? [],
     seoDescription: row.seo_description,
+    series: row.series ?? null,
+    author: row.author || null,
     status: row.status,
     publishedAt: row.published_at,
     readingMinutes: row.reading_minutes,
@@ -73,6 +77,14 @@ export async function getPostForEditing(id: string): Promise<AdminPost | null> {
   const { data, error } = await supabase.from("posts").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
   return data ? rowToAdminPost(data as PostRow) : null;
+}
+
+/** Series names already in use, to suggest while typing. */
+export async function listKnownSeries(): Promise<string[]> {
+  await requireAdmin();
+  const supabase = await serverClient();
+  const { data } = await supabase.from("posts").select("series").not("series", "is", null);
+  return [...new Set((data ?? []).map((r) => r.series as string))].sort((a, b) => a.localeCompare(b));
 }
 
 /** Tags already used on any post, to suggest while typing. */

@@ -9,7 +9,18 @@ export function LinkedInIcon({ size = 18 }: { size?: number }) {
 }
 
 /** "Written by Eeshan Karra", shown at the end of every post and on the About page. */
-export function AuthorCard() {
+export function AuthorCard({ guest }: { guest?: string | null }) {
+  if (guest) {
+    return (
+      <aside aria-label="About the author" className="mt-14 rounded-2xl border border-line bg-surface p-5 shadow-soft">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted">Guest post</p>
+        <p className="font-serif text-lg font-semibold text-ink">Written by {guest}</p>
+        <p className="mt-1 text-sm text-ink-soft">
+          Published on {site.name}, edited by {site.author}.
+        </p>
+      </aside>
+    );
+  }
   return (
     <aside
       aria-label="About the author"

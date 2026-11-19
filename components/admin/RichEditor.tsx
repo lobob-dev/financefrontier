@@ -11,6 +11,7 @@ import { common, createLowlight } from "lowlight";
 import type { DocNode } from "@/lib/content/doc";
 import { safeHref } from "@/lib/content/render";
 import { uploadImage } from "@/lib/admin/upload";
+import { StockSnapshotNode } from "./StockSnapshotNode";
 
 const lowlight = createLowlight(common);
 
@@ -52,6 +53,7 @@ const extensions = [
   TableRow,
   TableHeader,
   TableCell,
+  StockSnapshotNode,
   Placeholder.configure({ placeholder: "Start writing. Drag images straight into the page." }),
 ];
 
@@ -194,6 +196,7 @@ function Toolbar({ editor, onPickImages }: { editor: Editor; onPickImages: (file
       <ToolButton label="Numbered list" active={s.ordered} onClick={() => editor.chain().focus().toggleOrderedList().run()}><Icon d="M10 6h10M10 12h10M10 18h10M4 5h1.5v4M4 9h3M4 15.5a1.5 1.5 0 0 1 3 0c0 1.5-3 2-3 3.5h3" /></ToolButton>
       <ToolButton label="Quote" active={s.quote} onClick={() => editor.chain().focus().toggleBlockquote().run()}><Icon d="M7 7h4v4c0 3-2 5-4 6M15 7h4v4c0 3-2 5-4 6" /></ToolButton>
       <ToolButton label="Code block" active={s.code} onClick={() => editor.chain().focus().toggleCodeBlock().run()}><Icon d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14" /></ToolButton>
+      <ToolButton label="Company snapshot" onClick={() => editor.chain().focus().insertStockSnapshot().run()}><span className="flex items-center gap-1 px-1 text-[13px]"><Icon d="M4 19V9M10 19V5M16 19v-7M22 19H2" />Snapshot</span></ToolButton>
       <ToolButton label="Insert table" active={s.table} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Icon d="M4 5h16v14H4zM4 10h16M4 15h16M10 5v14M15 5v14" /></ToolButton>
       {sep}
       <ToolButton label="Insert image" onClick={() => fileRef.current?.click()}><Icon d="M4 5h16v14H4zM4 15l4.5-4.5 4 4L15 12l5 5M15.5 8.5h.01" /></ToolButton>

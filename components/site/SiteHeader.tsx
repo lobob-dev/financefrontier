@@ -33,6 +33,9 @@ export function SiteHeader({ floating = false }: { floating?: boolean }) {
             <span className="sm:hidden">Posts</span>
             <span className="hidden sm:inline">All posts</span>
           </Link>
+          <Link href="/track-record" className="hidden rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-accent-soft hover:text-accent-strong md:inline-flex md:px-3.5">
+            Track record
+          </Link>
           {/* on phones, About is in the footer and on the back of the book */}
           <Link href="/about" className="hidden rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-accent-soft hover:text-accent-strong sm:inline-flex sm:px-3.5">
             About
@@ -59,6 +62,7 @@ export function SiteFooter() {
             © {site.name} · {site.credit}
           </span>
           <Link href="/about" className="hover:text-accent-strong">About</Link>
+          <Link href="/track-record" className="hover:text-accent-strong">Track record</Link>
           <Link href="/contact" className="hover:text-accent-strong">Contact</Link>
           <a href={site.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-accent-strong">
             LinkedIn
