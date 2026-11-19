@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/components/site/PageShell";
 import { getPicks, type Pick } from "@/lib/picks";
-import { VERDICTS, chartRange, formatMoney, tradingViewSymbol, type Verdict } from "@/lib/content/stock";
+import { VERDICTS, formatMoney, tradingViewSymbol, type Verdict } from "@/lib/content/stock";
 import { TradingViewChart } from "@/components/site/TradingViewChart";
 import { formatDate } from "@/lib/format";
 import { site } from "@/lib/site";
@@ -189,7 +189,7 @@ export default async function TrackRecordPage() {
                     <div className="mt-4">
                       <TradingViewChart
                         symbol={symbol}
-                        range={chartRange(p.post.date, p.quote ? new Date(p.quote.asOf).getTime() : new Date(p.post.date).getTime() + 365 * 86_400_000)}
+                        since={p.post.date}
                         label={name}
                       />
                     </div>

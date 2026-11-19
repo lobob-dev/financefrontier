@@ -6,8 +6,8 @@ import { PageShell } from "@/components/site/PageShell";
 import { AuthorCard } from "@/components/site/AuthorCard";
 import { getNeighbours, getPostBySlug, getPublishedPosts, getRelated, getSeries } from "@/lib/posts";
 import { renderPost } from "@/lib/content/render";
-import { getPickForPost } from "@/lib/picks";
-import { chartRange, tradingViewSymbol } from "@/lib/content/stock";
+import { snapshotsIn } from "@/lib/picks";
+import { tradingViewSymbol } from "@/lib/content/stock";
 import { TradingViewChart } from "@/components/site/TradingViewChart";
 import { PostGrid } from "@/components/site/PostGrid";
 import { ReadingProgress } from "@/components/site/ReadingProgress";
@@ -15,6 +15,12 @@ import { GlossaryTips } from "@/components/site/GlossaryTips";
 import { formatDate, tagSlug } from "@/lib/format";
 import { site } from "@/lib/site";
 import { siteUrl } from "@/lib/env";
+
+/**
+ * A post published after the last deploy has no page built for it yet. This makes its
+ * first visitor wait for the real page, instead of briefly seeing a placeholder.
+ */
+export const ensureStatic = "navigation";
 
 export async function generateStaticParams() {
   const posts = await getPublishedPosts();
@@ -59,15 +65,16 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) notFound();
-  const [{ newer, older }, series, related, pick] = await Promise.all([
+  const [{ newer, older }, series, related] = await Promise.all([
     getNeighbours(slug),
     getSeries(post.series),
     getRelated(post),
-    getPickForPost(slug),
   ]);
+  // The chart needs only the company in the snapshot box, not today's prices, so the page never waits on them.
+  const snapshot = snapshotsIn(post.content)[0];
   const { html, headings } = renderPost(post.content);
   // A post with a company snapshot gets a live chart straight after the snapshot box.
-  const chartSymbol = pick ? tradingViewSymbol(pick.snapshot) : null;
+  const chartSymbol = snapshot ? tradingViewSymbol(snapshot) : null;
   const cardStart = html.indexOf('<aside class="stock-card"');
   const cardEnd = cardStart === -1 ? -1 : html.indexOf("</aside>", cardStart) + "</aside>".length;
   const [beforeChart, afterChart] = chartSymbol && cardEnd > 0 ? [html.slice(0, cardEnd), html.slice(cardEnd)] : [html, ""];
@@ -152,16 +159,16 @@ async function Article({ params }: { params: PageProps<"/blog/[slug]">["params"]
         </details>
       )}
       <div className="prose-ff mt-10" dangerouslySetInnerHTML={{ __html: beforeChart }} />
-      {pick && chartSymbol && afterChart && (
+      {snapshot && chartSymbol && afterChart && (
         <figure className="mt-6">
           <TradingViewChart
             compact
             symbol={chartSymbol}
-            range={chartRange(post.date, pick.quote ? new Date(pick.quote.asOf).getTime() : new Date(post.date).getTime() + 365 * 86_400_000)}
-            label={pick.snapshot.company || pick.snapshot.ticker}
+            since={post.date}
+            label={snapshot.company || snapshot.ticker}
           />
           <figcaption className="mt-2 text-center text-xs text-muted">
-            Live chart of {pick.snapshot.company || pick.snapshot.ticker} since before this post.{" "}
+            Live chart of {snapshot.company || snapshot.ticker} since before this post.{" "}
             <Link href="/track-record" className="font-medium text-accent-strong hover:underline">See every call on the track record</Link>
           </figcaption>
         </figure>

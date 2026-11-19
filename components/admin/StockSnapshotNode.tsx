@@ -59,7 +59,11 @@ export const StockSnapshotNode = Node.create({
       insertStockSnapshot:
         () =>
         ({ commands }) =>
-          commands.insertContent({ type: this.name, attrs: { ...emptySnapshot, metrics: emptySnapshot.metrics.map((m) => ({ ...m })) } }),
+          // A fresh line after the box takes the cursor, so whatever is inserted next does not replace the box.
+          commands.insertContent([
+            { type: this.name, attrs: { ...emptySnapshot, metrics: emptySnapshot.metrics.map((m) => ({ ...m })) } },
+            { type: "paragraph" },
+          ]),
     };
   },
 

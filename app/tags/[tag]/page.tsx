@@ -6,6 +6,12 @@ import { PostGrid } from "@/components/site/PostGrid";
 import { getAllTags, getPublishedPosts } from "@/lib/posts";
 import { tagSlug } from "@/lib/format";
 
+/**
+ * A post published after the last deploy has no page built for it yet. This makes its
+ * first visitor wait for the real page, instead of briefly seeing a placeholder.
+ */
+export const ensureStatic = "navigation";
+
 export async function generateStaticParams() {
   const tags = await getAllTags();
   return tags.length ? tags.map((t) => ({ tag: t.slug })) : [{ tag: "__none__" }];

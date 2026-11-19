@@ -107,7 +107,7 @@ export function tradingViewSymbol(s: Pick<StockSnapshot, "ticker" | "exchange">)
   return s.exchange === "Other" ? t : `${s.exchange}:${t}`;
 }
 
-/** A chart range that reaches back past the date of the call. */
+/** A chart range that reaches back past the date of the call. Worked out in the browser, where the clock is live. */
 export function chartRange(sinceIso: string, now = Date.now()) {
   const days = (now - new Date(sinceIso).getTime()) / 86_400_000;
   if (days <= 85) return "3M";

@@ -3,8 +3,11 @@
 A personal blog on stock picking. The home page is a 3D book that floats in space: each page is a post,
 newest first. Behind it is a private admin area where you write and publish posts.
 
-- **Public site:** the book (`/`), every post with search and tags (`/blog`), tag pages, About, Contact,
-  an RSS feed, a sitemap and share images for social media.
+- **Public site:** the book (`/`), every post with full-text search and tags (`/blog`), tag pages, a
+  **track record** of every stock call with live charts and a comparison with the market (`/track-record`),
+  **investor tools** (`/tools`), About and Contact, plus a sitemap, an RSS feed and share pictures.
+- **In each post:** a company snapshot box with your verdict, a live TradingView chart, plain-English
+  explainers for finance terms, a table of contents, a reading progress bar, series links and related posts.
 - **Admin area:** `/login` and `/admin`. Only one email address can get in. Write with a rich text editor,
   drop images straight into the page, save drafts automatically, preview, publish now or schedule for later.
 - **Hosting:** Vercel (free Hobby plan) for the website, Supabase (free plan) for the database,
@@ -48,6 +51,8 @@ Supabase holds the posts, signs you in and stores your images.
 2. Open `supabase/migrations/20261116000000_init.sql` from this project, copy everything, paste it
    into the editor and press **Run**. It creates the posts table, the admin list (already holding
    `eeshankarra@gmail.com`), login rate limiting, the image bucket and all the row level security rules.
+   Then do the same with `supabase/migrations/20261119000000_series_and_author.sql`, which adds the
+   series and guest author fields. (On the live site both have already been run.)
 3. Optional: run `supabase/seed.sql` the same way to add the three sample posts. You can delete them
    later from the admin area.
 
@@ -120,6 +125,14 @@ post does **not** need a redeploy: it appears straight away.
 free Supabase project never pauses, and it refreshes the post cache. Vercel adds the `CRON_SECRET` to the
 request, so nobody else can trigger it. You can see each run under the project's **Settings → Cron Jobs**.
 
+### Outside services
+
+- **Share prices** for the track record, share pictures and the "$1,000" calculator come from Yahoo
+  Finance's public price feed. It needs no account. Prices are cached for a few hours; if the feed ever
+  stops answering, the track record still shows each "price when written" and a dash for today's price.
+- **Live charts** are TradingView's free embeddable charts. They load in the reader's browser, only when
+  scrolled into view.
+
 ### Your own domain (optional)
 
 Buy a domain from any registrar, then in Vercel open **Settings → Domains** and follow the steps. Afterwards
@@ -171,6 +184,8 @@ The address is stored in two places, and both must agree:
 | `npm run db:start` | Optional: a full local Supabase in Docker, for testing login and the editor offline |
 | `npm run db:reset` | Recreate the local database from the migration and seed |
 | `npm run seed:sql` | Rewrite `supabase/seed.sql` from `lib/samplePosts.ts` |
+| `npx tsx scripts/import-wordpress.ts SITE` | Import every post from a WordPress.com blog (writes `supabase/imports/wordpress.sql`) |
+| `npx tsx scripts/review-posts.ts` | The one-off editorial pass over the imported posts (writes `supabase/imports/review.sql`) |
 
 For the local Supabase, run `npm run db:start`, then put the URL and publishable key it prints into
 `.env.local`. Its test mailbox (for magic links) is at http://127.0.0.1:54324.
@@ -181,6 +196,8 @@ For the local Supabase, run `npm run db:start`, then put the URL and publishable
 app/
   page.tsx                 the book (home page)
   blog/                    all posts, and each post at /blog/[slug]
+  track-record/            every stock call, its move since, the market comparison and live charts
+  tools/                   fair value, "$1,000" and dividend calculators
   tags/[tag]/              posts with one tag
   about/, contact/         About and Contact
   login/                   sign-in page and its server actions
@@ -188,18 +205,23 @@ app/
   admin/                   admin dashboard, editor and their server actions
   rss.xml/, sitemap.ts, robots.ts, opengraph-image.tsx
   api/keepalive/           the daily ping
+  api/search/              full-text search for /blog
+  api/history/             past prices for the "$1,000" calculator
 components/
   book/                    the 3D book and its 2D fallback
   admin/                   editor, post list, image and tag fields
   site/                    header, footer, post cards, search
 lib/
   posts.ts                 reading published posts (cached)
-  content/                 editor documents and the safe HTML renderer
+  content/                 editor documents, the safe HTML renderer, the glossary of explained
+                           terms (glossary.ts) and the company snapshot (stock.ts)
+  market.ts, picks.ts      share prices and the track record
   auth.ts, rateLimit.ts    admin check and login rate limiting
   supabase/                Supabase clients
   admin/                   admin queries and image upload
 supabase/
   migrations/              database tables and security rules
+  imports/                 the WordPress import and the editorial pass, as SQL
   seed.sql                 the three sample posts
 proxy.ts                   refreshes the sign-in session and guards /admin
 ```

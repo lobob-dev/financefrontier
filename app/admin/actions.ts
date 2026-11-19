@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { refresh, updateTag } from "next/cache";
+import { refresh, revalidateTag, updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { serverClient } from "@/lib/supabase/server";
 import { isDoc, readingMinutes, type DocNode } from "@/lib/content/doc";
@@ -9,6 +9,15 @@ import { safeSrc } from "@/lib/content/render";
 import { slugify } from "@/lib/format";
 import { rowToAdminPost, type PostRow } from "@/lib/admin/posts";
 import type { AdminPost } from "@/lib/types";
+
+/**
+ * Makes every page that lists or shows posts fetch fresh data on its very next visit,
+ * so a post is readable the moment it is published, edited or removed.
+ */
+function expirePosts() {
+  updateTag("posts");
+  revalidateTag("posts", { expire: 0 });
+}
 
 export type PostInput = {
   title: string;
@@ -89,7 +98,7 @@ export async function savePost(id: string, input: PostInput): Promise<SaveResult
   const { data, error } = await supabase.from("posts").update(cleaned.row).eq("id", id).select("*").single();
   if (error) return { ok: false, error: friendly(error.message) };
   const post = rowToAdminPost(data as PostRow);
-  if (post.status === "published") updateTag("posts");
+  if (post.status === "published") expirePosts();
   return { ok: true, post };
 }
 
@@ -116,7 +125,7 @@ export async function publishPost(id: string, input: PostInput, publishAt: strin
     .select("*")
     .single();
   if (error) return { ok: false, error: friendly(error.message) };
-  updateTag("posts");
+  expirePosts();
   return { ok: true, post: rowToAdminPost(data as PostRow) };
 }
 
@@ -131,7 +140,7 @@ export async function unpublishPost(id: string): Promise<SaveResult> {
     .select("*")
     .single();
   if (error) return { ok: false, error: friendly(error.message) };
-  updateTag("posts");
+  expirePosts();
   return { ok: true, post: rowToAdminPost(data as PostRow) };
 }
 
@@ -151,7 +160,7 @@ export async function setPublished(formData: FormData) {
   } else {
     await supabase.from("posts").update({ status: "draft" }).eq("id", id);
   }
-  updateTag("posts");
+  expirePosts();
   refresh();
 }
 
@@ -162,7 +171,7 @@ export async function deletePost(formData: FormData) {
   const supabase = await serverClient();
   const { error } = await supabase.from("posts").delete().eq("id", id);
   if (error) throw new Error(friendly(error.message));
-  updateTag("posts");
+  expirePosts();
   if (formData.get("from") === "editor") redirect("/admin");
   refresh();
 }

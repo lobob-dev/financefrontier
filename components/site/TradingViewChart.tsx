@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTheme } from "./useTheme";
+import { chartRange } from "@/lib/content/stock";
 
 type Props = {
   /** TradingView symbol, e.g. NASDAQ:MSFT or ASX:CBA */
   symbol: string;
-  /** How far back the chart starts, e.g. 6M or 12M */
-  range: string;
+  /** The date of the call; the chart reaches back past it. */
+  since: string;
   label: string;
   /** Smaller height for use inside a post. */
   compact?: boolean;
@@ -31,6 +32,7 @@ function Widget({ enabled, config, className, label }: { enabled: boolean; confi
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
     script.async = true;
     script.type = "text/javascript";
+    const { since, ...rest } = JSON.parse(key) as { since?: string } & Record<string, unknown>;
     script.innerHTML = JSON.stringify({
       autosize: true,
       interval: "D",
@@ -46,7 +48,8 @@ function Widget({ enabled, config, className, label }: { enabled: boolean; confi
       save_image: false,
       calendar: false,
       support_host: "https://www.tradingview.com",
-      ...JSON.parse(key),
+      ...rest,
+      ...(since ? { range: chartRange(since) } : {}),
     });
     el.append(widget, script);
     return () => {
@@ -64,7 +67,7 @@ function Widget({ enabled, config, className, label }: { enabled: boolean; confi
  * A live TradingView chart. It only loads when scrolled near, so a page with
  * many charts stays quick. The Expand button opens a large version with more tools.
  */
-export function TradingViewChart({ symbol, range, label, compact = false }: Props) {
+export function TradingViewChart({ symbol, since, label, compact = false }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -102,16 +105,16 @@ export function TradingViewChart({ symbol, range, label, compact = false }: Prop
       </div>
       <Widget
         enabled={visible}
-        config={{ symbol, range, hide_top_toolbar: true }}
+        config={{ symbol, since, hide_top_toolbar: true }}
         label={`Live price chart for ${label}`}
         className={`w-full overflow-hidden rounded-xl bg-bg-soft ${compact ? "h-[300px] sm:h-[360px]" : "h-[340px] sm:h-[400px]"}`}
       />
-      {expanded && <ExpandedChart symbol={symbol} range={range} label={label} onClose={() => setExpanded(false)} />}
+      {expanded && <ExpandedChart symbol={symbol} since={since} label={label} onClose={() => setExpanded(false)} />}
     </div>
   );
 }
 
-function ExpandedChart({ symbol, range, label, onClose }: Omit<Props, "compact"> & { onClose: () => void }) {
+function ExpandedChart({ symbol, since, label, onClose }: Omit<Props, "compact"> & { onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -143,7 +146,7 @@ function ExpandedChart({ symbol, range, label, onClose }: Omit<Props, "compact">
             Close <span aria-hidden="true">×</span>
           </button>
         </div>
-        <Widget enabled config={{ symbol, range, hide_top_toolbar: false }} className="min-h-0 flex-1" />
+        <Widget enabled config={{ symbol, since, hide_top_toolbar: false }} className="min-h-0 flex-1" />
       </div>
     </div>,
     document.body,
